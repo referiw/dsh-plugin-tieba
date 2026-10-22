@@ -78,6 +78,11 @@
 dsh plugin --profile <profile> add dsh-plugin-tieba
 ```
 
+> **从 0.2.0 升级**：0.2.0 有工具 schema 缺陷（会让对话请求被 API 拒绝），已废弃。pnpm 可能按 lockfile 继续解析到旧版本，显式指定一次即可：
+> ```bash
+> dsh plugin --profile <profile> add dsh-plugin-tieba@^0.2.1
+> ```
+
 `<profile>` 换成你在用的那个：跑 `dsh web` 就是 `web`，桌面版是 `desktop`，`ls ~/.dsh/profiles` 能看到全部。
 
 这条命令会同时写 `dependencies` 和 `dsh.profile.bundles`，**不用手工编辑**。装完重启 DSH，浏览器硬刷新一次。
