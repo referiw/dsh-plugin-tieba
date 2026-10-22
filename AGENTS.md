@@ -49,7 +49,9 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 
 **`apply` 必须整体包 try/catch。** 一个插件抛异常不该拖垮整个 profile。
 
-**装完必须进 `dsh.profile.bundles`**，否则设置页永远显示关闭。
+**包名必须在 `dsh.profile.bundles` 里**，否则 entry 不会被合成——设置页没入口、工具不注册。
+`dsh plugin --profile <profile> add <pkg>` **会自动写**这一项（实测：装完 bundles 末尾就多了包名），
+所以标准安装路径不用手改。只有 `pnpm add link:` 这种直接调 pnpm 的做法才需要手工补。
 
 ## 代码地图
 
@@ -61,7 +63,9 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 | `lib/client.js` | 设置页 UI | 必须是 `__ModuleLoader__` 外壳 |
 | `lib/config-store.mjs` | 配置读写（JSON + mtime 缓存） | 工具调用时重读，改完即时生效 |
 | `lib/paths.mjs` | 所有运行期路径 | 只在这里拼路径 |
-| `displayPath()`（core） | 对外展示路径 | 输出一律相对家目录，**不要写绝对路径**（会泄露用户名） |
+| `lib/browser.mjs` | 定位并启动浏览器 | 别退回"绑定 playwright 版本"的写法，见下文 |
+| `scripts/check-browser.mjs` | 诊断：打印选中的浏览器 | 只读，不改状态，可随时跑 |
+| `displayPath()`（core） | 对外展示路径 | 默认返回**绝对路径**（读图工具不展开 `~`，相对路径只在 cwd=家目录时成立）；`DSH_TIEBA_PATH_STYLE=home` 才切回 `~/...` |
 | `src/cli.mjs` | 命令行 | 薄封装，不写业务逻辑 |
 | `src/login.mjs` | 扫码登录 | 登录判定必须同源发起（CORS） |
 
@@ -115,13 +119,54 @@ isLocalRequest({ socket: { remoteAddress: '127.0.0.1' }, headers: { 'x-forwarded
    图片给路径，由 agent 自己 `read_image`
 4. 执行前调 `syncCfg()`，让设置页的改动即时生效
 
+## 浏览器（`lib/browser.mjs`）
+
+**为什么躲不掉**：贴吧对未登录请求一律回「百度安全验证」页。实测纯 HTTP 全废——
+
+| 客户端 | 结果 |
+|---|---|
+| Node `fetch` | 403 安全验证 |
+| `curl`（带 cookie jar 走一次首页） | 403 |
+| `curl_cffi` 模拟 Chrome / Safari / Edge 的 TLS 指纹 | 403 |
+| 真浏览器 | 能进；未登录时要求过滑块，登录后正常 |
+
+所以**不是 TLS 指纹问题，是会话问题**：换任何 HTTP 客户端都没用，除非带着已通过风控的 cookie。
+`p/totalComment`（楼中楼）和图片下载之所以能用纯 `fetch`，是因为它们不在这层风控后面。
+
+**不要绑定版本**：Playwright 按"版本 → 浏览器 revision"映射（1.64 → shell-1248），换个版本号，
+已经下好的浏览器就作废了。这里改成**扫描磁盘 + 用路径启动**，任何 revision 都能用。
+实测 `playwright-core@1.64` 能驱动 `chromium_headless_shell-1223`（Chrome 148）。
+
+解析顺序（第一个能起来就记住，失败清缓存重探）：
+
+```
+DSH_TIEBA_CHROME → ms-playwright 里的 headless shell / chromium（新版本优先） → 系统 Chrome → Edge → Chromium
+```
+
+排查：`node scripts/check-browser.mjs`。
+
+## 打包与发布
+
+- `files` 必须覆盖 `lib/ src/ scripts/ locale/ icon.svg cordis.patch.yml docs/`——少一个，
+  用户装到的就是残包（`bin` 指向 `src/cli.mjs`，尤其别漏）。
+- 全局 registry 可能是国内镜像（只读），`publishConfig.registry` 已钉 `https://registry.npmjs.org`。
+- **发完先看 `dist-tags`**：新版 npm 有 staged publishing，包不存在时会先公开一个
+  `0.0.0-stage` 占位版本（`stub: true`，几百字节），真正的版本要 `npm stage approve <id>` 才公开。
+  看到 `0.0.0-stage` 不代表发布失败，也不代表成功。
+- 验证发布结果别只看 `npm view`，直接装一遍：
+  `npm i dsh-plugin-tieba@<ver> --registry=https://registry.npmjs.org`，然后 `import` 主入口。
+
 ## 常见故障
 
 | 症状 | 原因 |
 |---|---|
 | 整个 DSH 起不来 | 大概率是 static 宿主 import 或客户端格式错，见上文契约 |
+| 设置页没有「贴吧」这一节 | 包没进 `dsh.profile.bundles`；`--dump-config \| grep tieba` 确认 |
+| 扫码后界面一直"未登录" | 写 cookie 前没建 `~/.dsh-tieba/`（`poll()` 里已加 `ensureHome()`）；或轮询返回的 500 被前端吞了 |
+| 二维码是破图 | 没有可用浏览器，或 `login/start` 失败；看 `/tieba/api/login/start` 的 JSON |
 | `tieba_status` 报 `no_cookie` | `cookies.json` 不存在或路径不对 |
 | 报 `expired` | cookie 失效，重扫码 |
 | 抓到的楼层数偏少 | 分页校验依赖页面 `1/N`，若被风控可能拿到局部 |
 | 图片是空白/0 字节 | 图床需要 Referer，`#fetchImage` 已带 |
+| 图片路径是裸文件名 | `displayPath()` 的分隔符处理错了（Windows 上 `\` 和 `/` 不匹配） |
 | 设置页头像不显示 | `himg.bdimg.com` 被本地网络拦截 |

@@ -12,17 +12,16 @@
 <p align="center">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <a href="https://www.npmjs.com/package/dsh-plugin-tieba"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-tieba.svg"></a>
-  <img alt="node" src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg">
   <img alt="dsh" src="https://img.shields.io/badge/dsh-%3E%3D0.2.0-blueviolet.svg">
 </p>
 
 <p align="center"><sub>非官方项目，由社区成员独立开发维护，与 DeepSeek 官方无关。</sub></p>
 
 <p align="center">
-  <img src="docs/settings.png" width="680" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
+  <img src="docs/settings.png" width="660" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
 </p>
 
-<p align="center"><sub>登录状态、抽样方式、是否截断、图片压到多大、请求多慢——设置页里都能调，改完即时生效。</sub></p>
+<p align="center"><sub>登录状态、抽样方式、是否截断、图片压多大、请求多慢——设置页里改完即时生效。</sub></p>
 
 <details>
 <summary><b>目录</b></summary>
@@ -34,7 +33,7 @@
 - [抽样策略](#抽样策略)
 - [配置](#配置)
 - [命令行](#命令行)
-- [为什么裸玩不行](#为什么裸玩不行)
+- [为什么必须用浏览器](#为什么必须用浏览器)
 - [与 DSH 的集成方式](#与-dsh-的集成方式)
 - [安全](#安全)
 - [已知限制](#已知限制)
@@ -47,7 +46,7 @@
 
 ## 它能产出什么
 
-给它一个 `tid`，回一份按楼层顺序排好的材料：
+给一个 `tid`，回一份按楼层顺序排好的材料：
 
 ```text
 《示例帖子：一个关于融资的讨论》 楼主 用户甲 ｜ 全文 39 层 ｜ 抽取 39 层
@@ -61,130 +60,71 @@
 这是某一层楼的回复内容[表情:咧嘴笑]
 └ 楼中楼 2 条:
   · 用户丙: 这是楼中楼里的一条回复
-  · 用户丁: 是楼中楼里的另一条回复
 ```
 
 | 特性 | 说明 |
 |---|---|
-| 楼层顺序 | 图片紧跟所属楼层，楼中楼挂在楼层下面 |
+| 按楼层 | 图片紧跟所属楼层，楼中楼挂在楼层下面 |
 | 表情转中文 | `image_emoticon22` → `[表情:咧嘴笑]`，**不读图** |
 | 省上下文 | 头像、昵称挂件永久跳过 |
-| 图片压缩 | 按像素面积等比缩小，原始尺寸记在 `.meta.json`（需要系统有 `ffmpeg` / `ffprobe`） |
-| 图片路径 | 绝对路径，任何工作目录下都能直接交给读图工具；代价是路径里带用户名，公开前自行打码 |
-
-> 不想让用户名出现在输出里：设 `DSH_TIEBA_PATH_STYLE=home`，路径会变成 `~/.dsh-tieba/images/…`。代价是调用方得自己把 `~` 展开——多数工具（包括 DSH 的读图）不会展开它，实测会被当成当前目录下名为 `~` 的文件夹。
+| 图片 | 按像素面积等比压缩，返回绝对路径，可直接交给读图工具 |
+| 隐私 | 输出里不含用户名；需要更干净的路径可设 `DSH_TIEBA_PATH_STYLE=home` |
 
 ## 安装
 
-**要求 DSH ≥ 0.2.0。** 已声明 `engines.dsh`，DSH 会在组合阶段校验：版本不匹配时整个 bundle 被跳过并记入 `skippedBundles`，实例照常启动、插件缺席。端到端验证跑在 **0.2.1-rc.2** 上。
-
-| 依赖 | 是否必需 | 说明 |
-|---|---|---|
-| DSH ≥ 0.2.0 | 必需 | `engines.dsh` 校验，不匹配整包跳过而不是半加载 |
-| Node ≥ 20 | 必需 | 插件宿主侧跑在 DSH 自带的 Node 上，通常无需单独装 |
-| chromium 系浏览器 | 必需（通常已具备） | Windows / macOS 自带 Edge 或装了 Chrome 就能直接用；没有时才需装 headless shell（约 118 MB） |
-| `ffmpeg` / `ffprobe` | 可选 | 装了才会压缩图片；没装就跳过压缩，原图照常保存 |
-
-| 步骤 | 做什么 |
-|---|---|
-| 1 | `dsh plugin … add` —— 依赖和 `dsh.profile.bundles` 一起写好，不用手工编辑 |
-| 2 | 重启 DSH，浏览器硬刷新 |
-
-只有两种情况需要额外操作：**系统里没有 Chrome / Edge**（见第 2 节），或者**从源码 link 安装**（pnpm 不会替你改 bundles，见第 1 节末尾）。
-
-### 1. 装包
+要求 **DSH ≥ 0.2.0**（已声明 `engines.dsh`，版本不匹配时整包被跳过而不是半加载）。
 
 ```bash
-dsh plugin --profile web add dsh-plugin-tieba
+dsh plugin --profile <profile> add dsh-plugin-tieba
 ```
 
-它做两件事：装依赖，并把包名追加到 profile 的 `dsh.profile.bundles`。装完可以直接验证合成结果里有没有这一行：
+`<profile>` 换成你在用的那个：跑 `dsh web` 就是 `web`，桌面版是 `desktop`，`ls ~/.dsh/profiles` 能看到全部。
+
+这条命令会同时写 `dependencies` 和 `dsh.profile.bundles`，**不用手工编辑**。装完重启 DSH，浏览器硬刷新一次。
+
+**浏览器**：插件要用真实浏览器渲染贴吧页面，但通常不用额外装——Windows / macOS 自带 Edge 或装了 Chrome 就够了。只有系统里找不到任何 chromium 系浏览器时（多见于干净的 Linux 服务器）：
 
 ```bash
-dsh --profile web --dump-config | grep -A2 'id: tieba'
+npx playwright-core install chromium --only-shell   # 约 118 MB
+# 或者：sudo apt install chromium
 ```
 
-从源码装也行（改代码时更方便），但**这条路要多一步**：
+`npm run check-browser` 可以看实际会选中哪个浏览器。
+
+<details>
+<summary><b>从源码安装（改代码时用）</b></summary>
 
 ```bash
 git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
-cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
+cd ~/.dsh/profiles/<profile> && pnpm add link:~/dsh-plugin-tieba
 ```
 
-`pnpm add link:` 是直接调 pnpm，不会改 bundles，需要手工把 `"dsh-plugin-tieba"` 追加到 `~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles` 数组末尾。少了这一步，包装上了但不会被加载：设置页没入口、工具也不注册——插件是靠 `dsh.bundle.patch` 把 `id: tieba` 那一行插进 Loader 树的。
+这条路直接调 pnpm，**不会**改 bundles，需要手工把 `"dsh-plugin-tieba"` 追加到该 profile `package.json` 的 `dsh.profile.bundles` 数组末尾。
 
-> 如果 `pnpm` 走的是国内镜像（npmmirror）而它还没索引到这个包，会报 `No matching version found`。等几分钟同步，或者临时指定官方源：
-> ```bash
-> pnpm add dsh-plugin-tieba --registry=https://registry.npmjs.org
-> ```
+Windows 上保存成 **UTF-8 无 BOM**——带 BOM 时 DSH 读配置会抛 `Unexpected token '\uFEFF'`。
 
-### 2. 准备浏览器（通常可以跳过）
-
-**先判断这步要不要做**：Windows / macOS 基本都自带 Edge 或装了 Chrome，插件会直接用系统浏览器——整节跳过即可。
-
-只有在系统里没有任何 chromium 系浏览器时才需要（多见于干净的 Linux 服务器）：
-
-```bash
-# 装一份独立的 headless shell（下载约 118 MB）
-cd ~/.dsh/profiles/web/node_modules/dsh-plugin-tieba   # 源码安装则是 clone 下来的目录
-npx playwright-core install chromium --only-shell
-
-# 或者用包管理器装系统浏览器
-sudo apt install chromium
-export DSH_TIEBA_CHROME=/usr/bin/chromium   # 或者直接指定已有二进制
-```
-
-为什么非要浏览器：贴吧对**未登录**的请求一律回「百度安全验证」页，`fetch` / `curl` 连正文都拿不到（实测模拟 Chrome 的 TLS 指纹也没用），能拿到楼层内容的只有真实浏览器引擎。
-
-插件按这个顺序找，第一个能起来的胜出：
-
-```
-DSH_TIEBA_CHROME → 磁盘上已装的 headless shell / chromium（新版本优先）→ 系统 Chrome → 系统 Edge → 系统 Chromium
-```
-
-**浏览器版本不需要和插件依赖的 `playwright-core` 严格对应。** 插件直接扫描 `ms-playwright` 目录里的可执行文件，用路径启动，不依赖 Playwright 的版本映射——所以升级插件不会让已经下载好的浏览器作废。（实测：`playwright-core` 1.64 能正常驱动 `chromium_headless_shell-1223`，即 Chrome 148。）
-
-排查用（在插件目录执行）：
-
-```bash
-npm run check-browser    # 打印实际选中的浏览器与版本
-```
-
-> 两样都没有时的表现：设置页点「重新扫码登录」后，二维码位置会直接显示提示和上面两条安装命令，不会只丢一句 `Executable doesn't exist`。
-
-### 3. 重启
-
-重启 DSH。profile 开了 HMR 的话配置改动会自动生效，但客户端 bundle 的 `rev` 是按文件 `mtime`/`ctime`/size 算的，改过 `lib/client.js` 仍然要重启；之后浏览器再硬刷新一次。
-
-> **Windows**：手改 `package.json` 后请保存为 **UTF-8 无 BOM**。带 BOM 时 DSH 读配置会直接抛 `Unexpected token '\uFEFF'`，症状看起来像插件坏了。
-
-首次使用需要登录一次，见下一节。
+</details>
 
 ## 登录
 
-贴吧的登录态只能靠真实浏览器拿到。两种方式：
+贴吧的登录态只能靠真实浏览器拿到。
 
 **设置页（推荐）**：DSH → 设置 → 贴吧 → 重新扫码登录。二维码直接显示在页面里，扫完自动变「已登录」。
 
-**命令行**：
+**命令行**：`node src/login.mjs`
 
-```bash
-node src/login.mjs
-```
-
-cookie 落在 `~/.dsh-tieba/cookies.json`（权限 `0600`），可用 `DSH_TIEBA_HOME` 改目录。
+cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 改目录。
 
 ## 工具
 
 | 工具 | 作用 |
 |---|---|
 | `tieba_thread` | 读一个帖子：拉全文 → 抽样 → 按楼层顺序返回 |
-| `tieba_status` | 登录态（贴吧 ID、昵称、头像 URL） |
+| `tieba_status` | 登录态（贴吧 ID、昵称、头像） |
 | `tieba_bars` | 当前账号关注的吧 |
 
-`tieba_thread` 的常用参数：
-
 ```jsonc
+// tieba_thread 的常用参数
 {
   "tid": "1234567890",      // 必填，来自 URL /p/<tid>
   "refresh": false,          // 忽略缓存重拉
@@ -199,7 +139,7 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（权限 `0600`），可用 `DSH_TIEBA
 
 ## 抽样策略
 
-默认**动态抽样**：楼层越多，比例越低，结果夹在 `[min, max]` 之间。
+默认**动态抽样**：楼层越多比例越低，结果夹在 `[min, max]` 之间。
 
 | 总楼层 | 抽多少 | 比例 |
 | ---: | ---: | ---: |
@@ -213,7 +153,7 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（权限 `0600`），可用 `DSH_TIEBA
 
 ## 配置
 
-设置页可改，也可直接编辑 `~/.dsh-tieba/config.json`（改完即时生效，无需重启）。
+设置页可改，也可直接编辑 `~/.dsh-tieba/config.json`（即时生效，无需重启）。
 
 | 键 | 默认 | 说明 |
 |---|---|---|
@@ -230,27 +170,25 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（权限 `0600`），可用 `DSH_TIEBA
 
 ## 命令行
 
-不想装插件也可以直接用：
+不想装插件也能直接用：
 
 ```bash
 tieba status                    # 登录态
 tieba thread 1234567890         # 读帖
 tieba thread 1234567890 --json  # 结构化输出
-tieba thread 1234567890 --no-sample --max-chars 500
 ```
 
-`tieba` 是包的 `bin`；没做全局安装时用 `node src/cli.mjs status` 等效。
+`tieba` 是包的 `bin`；没全局安装时用 `node src/cli.mjs status` 等效。
 
-## 为什么裸玩不行
+## 为什么必须用浏览器
 
-贴吧的反爬做得很扎实，常见做法都会撞墙：
+贴吧对**未登录**的请求一律回「百度安全验证」页，`fetch` / `curl` 连正文都拿不到——我试过模拟 Chrome / Safari / Edge 的 TLS 指纹（`curl_cffi`），全是 403。能拿到楼层内容的只有真实浏览器引擎。
 
-- **裸 cookie 重放无效。** `BDUSS` / `STOKEN` 齐全也没用，`dc/common/tbs` 恒返回 `is_login:0`——百度把会话绑在浏览器指纹上。而且那个接口会 301 跳到 `http://`，`BDUSS` 是 `Secure` cookie，压根不会发送。
-- **桌面版是前端二次渲染。** `.j_th_tit`、`.threadlist_title` 这些经典选择器全部抓不到，必须走移动版 `/mo/q/m`（服务端渲染）。
-- **翻页不能复用会话。** 在同一个浏览器上下文里连续请求 `pn=0 → 30 → 60`，会被判成翻页机器人并弹图形验证码。**每页新开一个上下文**、注入同一份 cookie，就完全正常。
-- **`pn` 不是页码。** 帖子里它是**楼层偏移量**（0/30/60），写成 `pn=2` 会返回空页。
+另外三个坑是插件替你填掉的：
 
-这些坑插件都填好了，对外只暴露一件事：给一个 `tid`，拿回可读的楼层。
+- **桌面版是前端二次渲染**，经典选择器抓不到，必须走移动版 `/mo/q/m`；
+- **翻页不能复用会话**，同一上下文里连翻 `pn=0 → 30 → 60` 会被判成机器人弹验证码，必须一页一个上下文；
+- **`pn` 是楼层偏移不是页码**，写 `pn=2` 返回空页。
 
 ## 与 DSH 的集成方式
 
@@ -264,27 +202,22 @@ tieba thread 1234567890 --no-sample --max-chars 500
 
 ## 安全
 
-**所有 `/tieba/api/*` 接口仅限本机访问。** 判据不是只看 `remoteAddress`——反向代理转发时连接同样来自 `127.0.0.1`，公网请求会被误判成本机。所以要求同时满足：
+`/tieba/api/*` **仅限本机访问**。判据不是只看 `remoteAddress`——反向代理转发时连接同样来自 `127.0.0.1`，公网请求会被误判成本机。所以要同时满足：连接来自回环地址，且没有任何转发头（`X-Forwarded-For` / `X-Real-IP` / `Forwarded` / `X-Forwarded-Host`）。不满足返回 `403 forbidden: local access only`。
 
-1. 连接来自回环地址（`127.0.0.1` / `::1` / `::ffff:127.0.0.1`）；
-2. **没有任何转发头**（`X-Forwarded-For` / `X-Real-IP` / `Forwarded` / `X-Forwarded-Host`）。
+对外只交流 `application/json` 与 `image/png`（登录二维码），不提供文件下载或 HTML 通道；请求体上限 64KB。
 
-不满足返回 `403 {"error":"forbidden: local access only"}`。
-
-插件对外只交流两种内容：`application/json`（文字）与 `image/png`（登录二维码）。不提供文件下载、HTML 或其它二进制通道；请求体上限 64KB。
-
-> **cookie 是明文 JSON**（`~/.dsh-tieba/cookies.json`，权限 `0600`）。它等价于你的贴吧登录态：别提交进 Git，别放进共享目录，也别贴截图。
-
-> **别整份贴 `dsh --dump-config` 的输出。** 它会把插件的 `config` 原样展开，里面有 cookie 和本机路径。
+> **cookie 是明文 JSON**（`~/.dsh-tieba/cookies.json`，`0600`），等价于你的贴吧登录态：别提交、别共享、别贴截图。
+>
+> **别整份贴 `dsh --dump-config`**：它会把插件 config 原样展开，里面有 cookie 和本机路径。
 
 ## 已知限制
 
-- **只读。** 不提供发帖、回复、签到、关注等写操作。
-- **移动版单页上限 30 层**，超过要靠 `pn` 偏移翻页。
-- **登录态会过期**，`BDUSS` 通常能撑几个月；失效时 `tieba_status` 会明确报 `expired`。
-- **热门回复未实现。** 贴吧的「热门回复」区块在测试过的帖子里始终为空，目前用楼中楼代替。
-- **图片压缩依赖系统 ffmpeg**（`ffmpeg` + `ffprobe` 在 PATH 里）。没装不会被报错打断：图片照常保存，只是跳过压缩，`imageMaxArea` / `imageMaxWidth` 这些上限也就不生效。
-- **抓取行为受百度风控影响**，请求间隔别调得太小。
+- **只读**，没有发帖 / 回复 / 签到 / 关注
+- 移动版单页上限 30 层，超过靠 `pn` 偏移翻页
+- 登录态会过期（`BDUSS` 通常能撑几个月），失效时 `tieba_status` 明确报 `expired`
+- 「热门回复」区块未实现，目前用楼中楼代替
+- 图片压缩依赖系统 `ffmpeg` / `ffprobe`：没装不会报错，只是跳过压缩
+- 抓取受百度风控影响，请求间隔别调太小
 
 ## 项目结构
 
@@ -294,57 +227,21 @@ dsh-plugin-tieba/
 │   ├── index.js          # 宿主半边：注册工具、挂 HTTP 路由
 │   ├── client.js         # 浏览器半边：手写的经典脚本，不是构建产物
 │   ├── core.mjs          # 内核：登录态、全量翻页、抽样、图片压缩
+│   ├── browser.mjs       # 定位磁盘上或系统的 chromium
 │   ├── server.mjs        # 设置页用的 HTTP 接口（仅限本机）
 │   ├── config-store.mjs  # 配置读写
-│   ├── paths.mjs         # 运行期路径
-│   ├── browser.mjs       # 定位系统 Chrome/Edge 并启动（不自带 Chromium）
-│   └── emoticon-names.json
-├── src/
-│   ├── cli.mjs           # 命令行
-│   └── login.mjs         # 扫码登录（独立跑，不依赖 DSH）
-├── scripts/
-│   └── check-browser.mjs # 打印实际选中的浏览器，排查"打不开"用
-├── locale/
-│   ├── en.json           # 插件展示元信息（meta.title / meta.description）
-│   └── zh.json
-├── cordis.patch.yml      # bundle 层：插入 id: tieba 这一行
-├── icon.svg              # 插件图标
-├── AGENTS.md             # 给 agent 看的工程说明
-└── README.md
+│   └── paths.mjs         # 运行期路径
+├── src/{cli,login}.mjs   # 命令行与扫码登录
+├── locale/{en,zh}.json   # 插件展示元信息
+├── scripts/check-browser.mjs
+└── cordis.patch.yml      # bundle 层：插入 id: tieba 这一行
 ```
 
 ## 开发
 
-### 客户端产物是手写的，不是打包出来的
+改代码前先看 [AGENTS.md](./AGENTS.md)：那里有客户端产物的硬约束（必须是经典脚本，不能出现 `import`/`export`）、宿主侧不能静态 import `@deepseek-ai/*` 的原因、浏览器解析顺序、以及怎么验证改动。
 
-`lib/client.js` 是一段**经典脚本**，没有构建步骤。DSH 用普通的 `<script src>` 加载 `/plugins/??…` 组合脚本，所以它里面出现任何顶层 `import` / `export` 都会让**整个组合**解析失败——症状是页面卡在 `Failed to load plugins`，并附一句 `import failed (see console for the import error)`，而此时服务端一切正常。
-
-必须保持这个形态：
-
-```js
-window.__ModuleLoader__.load({
-  id: 'dsh-plugin-tieba',        // 必须等于包名（浏览器模块 id 就是包名）
-  factory: (require) => {
-    const React = require('react');   // 只能 require 共享模块表里的包
-    var module = { exports: {} };
-    var exports = module.exports;
-    // …组件与 apply…
-    exports.apply = apply;
-    exports.inject = inject;
-    return module.exports;
-  },
-});
-```
-
-硬约束：
-
-- 不能有 `import` / `export` / `import.meta` / 顶层 `await`；
-- `react`、`react-dom`、`@deepseek-ai/cordis` 由宿主提供，**不要再打进去**：双份 React 会让 hooks 报错，双份 cordis 会让 Loader 认不出这是个插件；
-- 设置页注册：`ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id, order, label }, Component))`。`label` 可以是字符串，也可以是 `() => string`（要跟随语言切换才用函数）。
-
-### 宿主半边
-
-`lib/index.js` 注入 `tools` 与 `webServer`；`apply` 里任何异常都被兜住，不会把整棵插件树带下去。`@deepseek-ai/dsh-tools` 是**动态** import 的——以 `link:` 安装时 Node 按 realpath 解析，静态 import 会在模块加载阶段就抛。
+一句话版本：`lib/client.js` 手写、保持 `window.__ModuleLoader__.load({id, factory})` 外壳；改完重启 DSH 才生效。
 
 ## 彩蛋
 
@@ -353,7 +250,7 @@ window.__ModuleLoader__.load({
 
 <img src="docs/demo.png" width="720" alt="在 DSH 里让它去 deepseek 吧读几个帖子之后的输出">
 
-> 截图里是贴吧用户的原始发言摘要，不代表本项目立场；昵称、立场词与帖子 id 都没有做处理。
+> 截图里是贴吧用户的原始发言摘要，不代表本项目立场；昵称与帖子 id 都没有处理。
 
 </details>
 
