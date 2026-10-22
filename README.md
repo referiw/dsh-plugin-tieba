@@ -68,7 +68,7 @@
 | 楼层顺序 | 图片紧跟所属楼层，楼中楼挂在楼层下面 |
 | 表情转中文 | `image_emoticon22` → `[表情:咧嘴笑]`，**不读图** |
 | 省上下文 | 头像、昵称挂件永久跳过 |
-| 图片压缩 | 按像素面积等比缩小，原始尺寸记在 `.meta.json` |
+| 图片压缩 | 按像素面积等比缩小，原始尺寸记在 `.meta.json`（需要系统有 `ffmpeg` / `ffprobe`） |
 | 图片路径 | 绝对路径，任何工作目录下都能直接交给读图工具；代价是路径里带用户名，公开前自行打码 |
 
 > 不想让用户名出现在输出里：设 `DSH_TIEBA_PATH_STYLE=home`，路径会变成 `~/.dsh-tieba/images/…`。代价是调用方得自己把 `~` 展开——多数工具（包括 DSH 的读图）不会展开它，实测会被当成当前目录下名为 `~` 的文件夹。
@@ -101,11 +101,12 @@ cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 
 ### 2. 准备浏览器（二选一）
 
-贴吧的页面有 TLS / HTTP 指纹校验，`fetch` / `curl` 拿到的是「百度安全验证」403，楼层必须由真实浏览器引擎渲染出来。所以要有一份 chromium 系浏览器：
+贴吧对**未登录**的请求一律回「百度安全验证」页（滑块），`fetch` / `curl` 连正文都拿不到——实测模拟 Chrome 的 TLS 指纹也没用，能拿到楼层内容的只有真实浏览器引擎。所以要有一份 chromium 系浏览器：
 
-**A. 装独立 headless shell（下载约 118 MB）** —— 不依赖系统装没装浏览器，版本由插件自己钉住：
+**A. 装独立 headless shell（下载约 118 MB）** —— 不依赖系统装没装浏览器，隔离在本插件里：
 
 ```bash
+cd ~/.dsh/profiles/web/node_modules/dsh-plugin-tieba   # 源码安装则是 clone 下来的目录
 npx playwright-core install chromium --only-shell
 ```
 
@@ -124,7 +125,7 @@ DSH_TIEBA_CHROME → 磁盘上已装的 headless shell / chromium（新版本优
 
 **浏览器版本不需要和插件依赖的 `playwright-core` 严格对应。** 插件直接扫描 `ms-playwright` 目录里的可执行文件，用路径启动，不依赖 Playwright 的版本映射——所以升级插件不会让已经下载好的浏览器作废。（实测：`playwright-core` 1.64 能正常驱动 `chromium_headless_shell-1223`，即 Chrome 148。）
 
-排查用：
+排查用（在插件目录执行）：
 
 ```bash
 npm run check-browser    # 打印实际选中的浏览器与版本
@@ -282,6 +283,7 @@ tieba thread 1234567890 --no-sample --max-chars 500
 - **移动版单页上限 30 层**，超过要靠 `pn` 偏移翻页。
 - **登录态会过期**，`BDUSS` 通常能撑几个月；失效时 `tieba_status` 会明确报 `expired`。
 - **热门回复未实现。** 贴吧的「热门回复」区块在测试过的帖子里始终为空，目前用楼中楼代替。
+- **图片压缩依赖系统 ffmpeg**（`ffmpeg` + `ffprobe` 在 PATH 里）。没装不会被报错打断：图片照常保存，只是跳过压缩，`imageMaxArea` / `imageMaxWidth` 这些上限也就不生效。
 - **抓取行为受百度风控影响**，请求间隔别调得太小。
 
 ## 项目结构
