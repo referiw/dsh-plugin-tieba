@@ -198,7 +198,7 @@ tieba thread 1234567890 --json  # 结构化输出
 |---|---|
 | 工具 | `ctx.tools.register`：`tieba_thread` / `tieba_status` / `tieba_bars` |
 | 设置页 | 客户端插件 `ctx.slots.inject('settings.section', …)` |
-| HTTP | `ctx.webServer` 挂 `/tieba/api/*`（仅限本机） |
+| HTTP | `ctx.webServer` 挂 `/tieba/api/*`（只服务设置页） |
 | 装配 | `dsh.bundle.patch` 插入 `id: tieba` 一行 |
 | 展示 | `locale/*.json` 的 `meta.title` / `meta.description` |
 
@@ -244,7 +244,7 @@ dsh-plugin-tieba/
 │   ├── client.js         # 浏览器半边：手写的经典脚本，不是构建产物
 │   ├── core.mjs          # 内核：登录态、全量翻页、抽样、图片压缩
 │   ├── browser.mjs       # 定位磁盘上或系统的 chromium
-│   ├── server.mjs        # 设置页用的 HTTP 接口（仅限本机）
+│   ├── server.mjs        # 设置页用的 HTTP 接口
 │   ├── config-store.mjs  # 配置读写
 │   └── paths.mjs         # 运行期路径
 ├── src/{cli,login}.mjs   # 命令行与扫码登录
