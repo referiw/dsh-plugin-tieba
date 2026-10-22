@@ -8,6 +8,8 @@
 
 不发言、不点赞、不签到、不关注。只读。
 
+> **非官方项目**：由社区成员独立开发和维护，与 DeepSeek 官方无关。
+
 <img src="docs/settings.png" width="700" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
 
 > 设置页里能调完所有东西：登录状态、抽样方式、是否截断、图片压到多大、请求多慢。改完即时生效。
@@ -50,22 +52,59 @@
 
 ## 安装
 
-```bash
-# 1. 装进 profile
-dsh plugin --profile web add dsh-plugin-tieba
+**要求 DSH ≥ 0.2.0。** 已声明 `engines.dsh`，DSH 会在组合阶段校验它：版本不匹配时整个 bundle 被跳过并记入 `skippedBundles`，不会半加载。端到端验证跑在 **0.2.1-rc.2** 上。
 
-# 2. 把包名写进 profile 的 bundles（关键，否则设置里永远是关的）
-#    ~/.dsh/profiles/web/package.json → dsh.profile.bundles 追加 "dsh-plugin-tieba"
+### 1. 把包装进 profile
+
+发布到 npm 之后：
+
+```bash
+dsh plugin --profile web add dsh-plugin-tieba
 ```
 
-也可以从源码链接安装：
+从源码安装（现在就能用）：
 
 ```bash
 git clone <repo> ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
+### 2. 把包名写进 profile 的 bundles
+
+```jsonc
+// ~/.dsh/profiles/web/package.json
+{
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-plugin-tieba"
+      ]
+    }
+  }
+}
+```
+
+这一步不能省。插件是靠 `dsh.bundle.patch` 把 `id: tieba` 这一行插进 Loader 树的——**包装进了 `node_modules` 但没进 bundles，等于装了一个不会被加载的包**：设置页没有入口，工具也不会注册。`dsh plugin … add` 走的是 pnpm，不会替你改这个列表。
+
+### 3. 重启
+
+重启 DSH。profile 开了 HMR 的话配置改动会自动生效，但客户端 bundle 的 `rev` 是按文件 `mtime`/`ctime`/size 算的，改过 `lib/client.js` 仍然要重启；之后浏览器再硬刷新一次。
+
+> **Windows**：手改 `package.json` 后请保存为 **UTF-8 无 BOM**。带 BOM 时 DSH 读配置会直接抛 `Unexpected token '\uFEFF'`，症状看起来像插件坏了。
+
 首次使用需要登录一次（见下）。
+
+## 与 DSH 的集成方式
+
+| 面 | 用什么 |
+|---|---|
+| 工具 | `ctx.tools.register`：`tieba_thread` / `tieba_status` / `tieba_bars` |
+| 设置页 | 客户端插件 `ctx.slots.inject('settings.section', …)` |
+| HTTP | `ctx.webServer` 挂 `/tieba/api/*`（仅限本机） |
+| 装配 | `dsh.bundle.patch` 插入 `id: tieba` 一行 |
+| 展示 | `locale/*.json` 的 `meta.title` / `meta.description` |
 
 ## 登录
 
@@ -109,7 +148,7 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 默认**动态抽样**：楼层越多，比例越低，结果夹在 `[min, max]` 之间。
 
 | 总楼层 | 抽多少 | 比例 |
-|---:|---:|---:|
+| ---: | ---: | ---: |
 | ≤ 50 | 全读 | 100% |
 | 100 | 65 | 65% |
 | 300 | 125 | 42% |
@@ -146,6 +185,8 @@ tieba thread 1234567890 --json  # 结构化输出
 tieba thread 1234567890 --no-sample --max-chars 500
 ```
 
+`tieba` 是包的 `bin`；没做全局安装时用 `node src/cli.mjs status` 等效。
+
 ## 安全
 
 **所有 `/tieba/api/*` 接口仅限本机访问。** 判据不是只看 `remoteAddress`——反向代理转发时连接同样来自
@@ -159,34 +200,81 @@ tieba thread 1234567890 --no-sample --max-chars 500
 插件对外只交流两种内容：`application/json`（文字）与 `image/png`（登录二维码）。不提供文件下载、
 HTML 或其它二进制通道；请求体上限 64KB。
 
+**cookie 是明文 JSON**（`~/.dsh-tieba/cookies.json`，权限 `0600`）。它等价于你的贴吧登录态：
+别提交进 Git，别放进共享目录，也别贴截图。
+
+**别整份贴 `dsh --dump-config` 的输出。** 它会把插件 `config` 原样展开，里面有 cookie 和本机路径。
+
 ## 已知限制
 
 - **只读。** 不提供发帖、回复、签到、关注等写操作。
 - **移动版单页上限 30 层**，超过要靠 `pn` 偏移翻页。
 - **登录态会过期**，`BDUSS` 通常能撑几个月；失效时 `tieba_status` 会明确报 `expired`。
 - **热门回复未实现。** 贴吧的「热门回复」区块在测试过的帖子里始终为空，目前用楼中楼代替。
-- 抓取行为受百度风控影响，请求间隔别调得太小。
+- **抓取行为受百度风控影响**，请求间隔别调得太小。
 
 ## 项目结构
 
 ```
 dsh-plugin-tieba/
 ├── lib/
-│   ├── index.js          # DSH 插件入口（注册工具）
+│   ├── index.js          # 宿主半边：注册工具、挂 HTTP 路由
+│   ├── client.js         # 浏览器半边：手写的经典脚本，不是构建产物
 │   ├── core.mjs          # 内核：登录态、全量翻页、抽样、图片压缩
 │   ├── server.mjs        # 设置页用的 HTTP 接口（仅限本机）
-│   ├── client.js         # 设置页 UI（浏览器半侧）
 │   ├── config-store.mjs  # 配置读写
 │   ├── paths.mjs         # 运行期路径
 │   └── emoticon-names.json
 ├── src/
 │   ├── cli.mjs           # 命令行
-│   ├── login.mjs         # 扫码登录
-│   └── dump-cookies.mjs
-├── cordis.patch.yml
+│   └── login.mjs         # 扫码登录（独立跑，不依赖 DSH）
+├── locale/
+│   ├── en.json           # 插件展示元信息（meta.title / meta.description）
+│   └── zh.json
+├── cordis.patch.yml      # bundle 层：插入 id: tieba 这一行
 ├── AGENTS.md             # 给 agent 看的工程说明
 └── README.md
 ```
+
+## 开发
+
+### 客户端产物是手写的，不是打包出来的
+
+`lib/client.js` 是一段**经典脚本**，没有构建步骤。DSH 用普通的 `<script src>` 加载 `/plugins/??…`
+组合脚本，所以它里面出现任何顶层 `import` / `export` 都会让**整个组合**解析失败——症状是页面卡在
+`Failed to load plugins`，并附一句 `import failed (see console for the import error)`，而此时服务端
+一切正常。
+
+必须保持这个形态：
+
+```js
+window.__ModuleLoader__.load({
+  id: 'dsh-plugin-tieba',        // 必须等于包名（浏览器模块 id 就是包名）
+  factory: (require) => {
+    const React = require('react');   // 只能 require 共享模块表里的包
+    var module = { exports: {} };
+    var exports = module.exports;
+    // …组件与 apply…
+    exports.apply = apply;
+    exports.inject = inject;
+    return module.exports;
+  },
+});
+```
+
+几条硬约束：
+
+- 不能有 `import` / `export` / `import.meta` / 顶层 `await`；
+- `react`、`react-dom`、`@deepseek-ai/cordis` 由宿主提供，**不要再打进去**：双份 React 会让 hooks 报错，
+  双份 cordis 会让 Loader 认不出这是个插件；
+- 设置页注册：`ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id, order, label }, Component))`。
+  `label` 可以是字符串，也可以是 `() => string`（要跟随语言切换才用函数）。
+
+### 宿主半边
+
+`lib/index.js` 注入 `tools` 与 `webServer`；`apply` 里任何异常都被兜住，不会把整棵插件树带下去。
+`@deepseek-ai/dsh-tools` 是**动态** import 的——以 `link:` 安装时 Node 按 realpath 解析，静态 import
+会在模块加载阶段就抛。
 
 ## 许可
 
