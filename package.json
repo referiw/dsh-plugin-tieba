@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-tieba",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "只读百度贴吧的 DeepSeek Harness 插件：全量翻页、动态抽样、楼中楼、按楼层取图",
   "type": "module",
   "license": "MIT",
@@ -56,14 +56,10 @@
     "playwright-core": "^1.49.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+    "@deepseek-ai/cordis": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-tools": {
       "optional": true
     }
   },
