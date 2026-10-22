@@ -49,13 +49,15 @@ const defineTool = defineToolWith(hostDefineTool);   // lib/tool-schema.mjs
 
 - 官方包（`@deepseek-ai/dsh-tool-todo`）活在 DSH 安装内部，peer 全都在；
 - 第三方插件不一样：**桌面版把 DSH 打进 `app.asar`**，插件按名字解析不到 `@deepseek-ai/*`
-  （Windows junction 指不进 asar，`profiles/node_modules` 里的投影实测大量悬空）；
-- 把 `@deepseek-ai/dsh-tools` 声明成普通依赖也不行：它自己带十来个 host peer
-  （`cordis` / `dsh-agent` / `dsh-llm` / `dsh-session` …），装进来等于把半个宿主拖进 profile，
-  版本还对不上。**0.2.2 就是这么坏的**：安装成功、启动时 `ERR_MODULE_NOT_FOUND`，插件直接不加载。
+  （Windows junction 指不进 asar）；
+- 把 `@deepseek-ai/dsh-tools` 声明成普通依赖更糟——**官方 advisory 明确禁止插件直接依赖框架内部包**。
+  见 [deepseek-harness#1496](https://github.com/deepseek-ai/deepseek-harness/discussions/1496) 的 #1486：
+  pnpm 会把插件的传递依赖 `@deepseek-ai/*` hoist 到 profile 顶层，同一进程出现两份 dsh-tools，
+  模块内 `Symbol('x')` 跨实例不相等 → `ctx.tools[symbol]` 为 undefined → **每次工具调用都失败**
+  （`Cannot read properties of undefined (reading 'prepare')`）。0.2.2 就是这样：装得上、跑不了。
 
 所以正确结构是：package.json 里声明成 **optional peer**（表意，不安装）+ 运行时动态 import + 本地编译兜底。
-这不是绕规范，是桌面版分发下的唯一可行解。**别把它"优化"成静态 import。**
+这不是绕规范，是 advisory 要求的方向。**别把它"优化"成静态 import。**
 
 **工具 schema 是启动时注册的。** 换包/升级插件后必须重启 DSH，否则进程里还是旧注册——
 旧版本有问题时会表现为"升级了但还是报同一个错"。
