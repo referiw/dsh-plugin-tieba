@@ -37,6 +37,7 @@
 - [与 DSH 的集成方式](#与-dsh-的集成方式)
 - [安全](#安全)
 - [已知限制](#已知限制)
+- [与其他插件共存](#与其他插件共存)
 - [项目结构](#项目结构)
 - [开发](#开发)
 - [彩蛋](#彩蛋)
@@ -234,6 +235,36 @@ tieba thread 1234567890 --json  # 结构化输出
 - 「热门回复」区块未实现，目前用楼中楼代替
 - 图片压缩依赖系统 `ffmpeg` / `ffprobe`：没装不会报错，只是跳过压缩
 - 抓取受百度风控影响，请求间隔别调太小
+
+## 与其他插件共存
+
+本插件**不声明任何 `@deepseek-ai/*` 依赖，也不 import 宿主包**——工具定义由本地生成（`lib/tool-schema.mjs`）。
+
+原因是踩过坑：`@deepseek-ai/dsh-tools` 里的 `TOOL_RUNTIME_SCHEDULER` 是模块内 `Symbol(...)`。只要它被装进 profile（**声明 peer 就够了，pnpm 会自动安装**），进程里就有两份，宿主查 `ctx.tools[symbol]` 得到 undefined：
+
+```
+Cannot read properties of undefined (reading 'prepare')
+```
+
+**每次工具调用都会失败**，还会留下孤儿 `tool_calls`，之后每轮 400。详见 [deepseek-harness#1486](https://github.com/deepseek-ai/deepseek-harness/discussions/1496)。
+
+遇到这个报错时，它**不是本插件造成的**（连 import 都没有），排查：
+
+```bash
+cd ~/.dsh/profiles/<profile> && pnpm why @deepseek-ai/dsh-tools
+```
+
+会列出哪个插件声明了它。临时恢复（重启生效）：
+
+```bash
+rm -rf ~/.dsh/profiles/<profile>/node_modules/@deepseek-ai
+```
+
+但只要那个插件还在，下次 `pnpm add` 又会装回来。根治两条：卸掉该插件，或关掉 peer 自动安装：
+
+```bash
+echo "auto-install-peers=false" >> ~/.dsh/profiles/<profile>/.npmrc
+```
 
 ## 项目结构
 
