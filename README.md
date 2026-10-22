@@ -1,16 +1,16 @@
 # dsh-plugin-tieba
 
+![license](https://img.shields.io/badge/license-MIT-blue.svg)
+![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)
+![dsh](https://img.shields.io/badge/dsh-%3E%3D0.2.0-blueviolet.svg)
+
 **只读**百度贴吧的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件：把一整栋楼读成一份带图的结构化材料，交给 agent 去读。
 
 不发言、不点赞、不签到、不关注。只读。
 
-<img src="docs/settings.png" width="720" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
+<img src="docs/settings.png" width="700" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
 
 > 设置页里能调完所有东西：登录状态、抽样方式、是否截断、图片压到多大、请求多慢。改完即时生效。
-
-![license](https://img.shields.io/badge/license-MIT-blue.svg)
-![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)
-![dsh](https://img.shields.io/badge/dsh-%3E%3D0.2.0-blueviolet.svg)
 
 ---
 
@@ -36,7 +36,7 @@
 [图 .dsh-tieba/images/1234567890/f1_1.jpg]
 
 【第 3 层 5% 用户乙】
-这是某一层楼的回复内容[表情:15]
+这是某一层楼的回复内容[表情:咧嘴笑]
 └ 楼中楼 2 条:
   · 用户丙: 这是楼中楼里的一条回复
   · 用户丁: 这是楼中楼里的另一条回复
