@@ -208,7 +208,7 @@ tieba thread 1234567890 --json  # 结构化输出
 
 - 默认只接受回环地址（`127.0.0.1` / `::1` / `localhost`）；
 - `sec-fetch-site: cross-site` 一律拒绝；带 `Origin` 时必须与 `Host` 同源（挡 CSRF）；
-- **公网 / 反向代理 / 网关插件部署**：请求的 Host 是你的域名，需要显式放行，否则 403：
+- **公网 / 反向代理 / 网关插件部署**：请求的 Host 是你的域名。**如果 DSH 本身已经用 `--trusted-host <域名>` 启动（网关/反代部署必然配过），插件会自动沿用那份白名单**，不用额外配置；否则显式放行：
 
   ```bash
   export DSH_TIEBA_TRUSTED_HOST=tieba.example.com   # 多个用逗号分隔
