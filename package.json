@@ -31,7 +31,8 @@
     "cordis.patch.yml",
     "README.md",
     "AGENTS.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/"
   ],
   "scripts": {
     "login": "node src/login.mjs",

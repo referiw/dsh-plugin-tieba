@@ -4,6 +4,10 @@
 
 不发言、不点赞、不签到、不关注。只读。
 
+<img src="docs/settings.png" width="720" alt="设置页：登录状态、抽样策略、输出截断、图片压缩、请求节流">
+
+> 设置页里能调完所有东西：登录状态、抽样方式、是否截断、图片压到多大、请求多慢。改完即时生效。
+
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 ![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)
 ![dsh](https://img.shields.io/badge/dsh-%3E%3D0.2.0-blueviolet.svg)
@@ -24,18 +28,18 @@
 ## 它产出什么
 
 ```text
-《不懂股票，大家怎么看》 楼主 不太懂这些x ｜ 全文 39 层 ｜ 抽取 39 层
+《示例帖子：一个关于融资的讨论》 楼主 用户甲 ｜ 全文 39 层 ｜ 抽取 39 层
 
-【第 1 层 0% 不太懂这些x 楼主】
-不懂股票，大家怎么看
+【第 1 层 0% 用户甲 楼主】
+示例帖子的主楼内容
  [图1]
-[图 .dsh-tieba/images/11126656050/f1_1.jpg]
+[图 .dsh-tieba/images/1234567890/f1_1.jpg]
 
-【第 3 层 5% zzy1538172006】
-梁子自己不是能通过幻方搞钱吗？融的这些资来干嘛？[表情:15]
+【第 3 层 5% 用户乙】
+这是某一层楼的回复内容[表情:15]
 └ 楼中楼 2 条:
-  · 贴吧用户_aXWV2AP: 买卡，现在好多大公司都通过走私去买禁售的卡
-  · 守秧人: 谁会嫌钱多，幻方那点不够AI烧的
+  · 用户丙: 这是楼中楼里的一条回复
+  · 用户丁: 这是楼中楼里的另一条回复
 ```
 
 - **按楼层顺序**，图片紧跟所属楼层，楼中楼挂在楼层下面
@@ -89,7 +93,7 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 
 ```jsonc
 {
-  "tid": "11124659583",     // 必填，来自 URL /p/<tid>
+  "tid": "1234567890",      // 必填，来自 URL /p/<tid>
   "refresh": false,          // 忽略缓存重拉
   "sampleMode": "dynamic",   // dynamic | fixed | ratio | all
   "floors": 100,             // sampleMode=fixed 时的层数
@@ -137,9 +141,9 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 
 ```bash
 tieba status                    # 登录态
-tieba thread 11126656050        # 读帖
-tieba thread 11126656050 --json # 结构化输出
-tieba thread 11126656050 --no-sample --max-chars 500
+tieba thread 1234567890         # 读帖
+tieba thread 1234567890 --json  # 结构化输出
+tieba thread 1234567890 --no-sample --max-chars 500
 ```
 
 ## 安全
