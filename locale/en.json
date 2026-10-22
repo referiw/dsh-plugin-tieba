@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Tieba Reader",
+    "description": "Read a Baidu Tieba thread as structured, image-aware material for the agent."
+  }
+}
