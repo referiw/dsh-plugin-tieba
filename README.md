@@ -99,17 +99,18 @@ cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 
 ### 2. 下载登录用的浏览器
 
-扫码登录和抓取都走真实浏览器，而 `pnpm add` **不会**下载这些二进制。装完包后在插件所在目录跑一次：
+**必须**，而且两个环节都依赖它：扫码登录要开真浏览器渲染百度登录页再截二维码；抓取要走移动版页面、每页新开一个上下文。它不是可选的加速项。
+
+`playwright` 已经在 `dependencies` 里，但**浏览器二进制不是 npm 包**，没法写进依赖树——只能靠安装脚本或手动跑一次：
 
 ```bash
-# 源码安装：就是 clone 下来的目录
-# 注册表安装：~/.dsh/profiles/web/node_modules/dsh-plugin-tieba
-npx playwright install chromium
+# 注册表安装：postinstall 会自动尝试下载（约 200 MB，已装则秒过）
+# 从源码 link 安装：pnpm 不会执行目标包的 postinstall，必须手动跑
+cd ~/dsh-plugin-tieba           # 或 ~/.dsh/profiles/web/node_modules/dsh-plugin-tieba
+npx playwright install chromium # 等价于 npm run setup
 ```
 
-约 200 MB，只需一次。
-
-> **跳过这步的表现**：设置页点「重新扫码登录」后，二维码位置是空白或破图——因为 `chromium.launch()` 抛了「Executable doesn't exist」。
+> **跳过这步的表现**：设置页点「重新扫码登录」后，二维码位置是空白或破图，失败原因会直接显示在下面——`chromium.launch()` 抛「Executable doesn't exist」。
 >
 > 机器上已经装过别的 Playwright 不代表够用：浏览器版本必须和**本插件依赖的 playwright 版本**对应。版本不一致时报错里会给出两个不同的 revision 号（例如已装 `chromium-1223`、需要 `chromium-1248`），照着报错跑一次上面的命令即可。
 

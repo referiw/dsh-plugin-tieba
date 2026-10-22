@@ -38,6 +38,7 @@
   "files": [
     "lib/",
     "src/",
+    "scripts/",
     "icon.svg",
     "locale/",
     "cordis.patch.yml",
@@ -47,6 +48,8 @@
     "docs/"
   ],
   "scripts": {
+    "postinstall": "node scripts/ensure-browser.mjs",
+    "setup": "node scripts/ensure-browser.mjs",
     "login": "node src/login.mjs",
     "status": "node src/cli.mjs status"
   },
