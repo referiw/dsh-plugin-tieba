@@ -56,6 +56,27 @@ const defineTool = defineToolWith(hostDefineTool);   // lib/tool-schema.mjs
 **工具 schema 是启动时注册的。** 换包/升级插件后必须重启 DSH，否则进程里还是旧注册——
 旧版本有问题时会表现为"升级了但还是报同一个错"。
 
+### 标准写法与我们为什么偏离
+
+官方工具包（如 `@deepseek-ai/dsh-tool-todo`）是**静态**引入：
+
+```js
+import { defineTool } from '@deepseek-ai/dsh-tools';
+ctx.tools.register(defineTool({ name, description, parameters, ... }));
+```
+
+宿主把安装包投影到 `$DSH_HOME/profiles/node_modules`，插件按名字就能解析到。`defineTool` 负责
+把 `{ 参数名: { type, required, description } }` 编译成 JSON Schema、校验入参、收口 output。
+
+我们改成**动态 import + 本地编译兜底**，是因为两种真实环境会让静态引用直接失败：
+
+1. `link:` 安装——Node 按 realpath 解析，绕过 profile 的 `node_modules`；
+2. 投影损坏——旧版全局安装残留的 junction 指向已不存在的路径（实测某台机器
+   `profiles/node_modules` 187 个条目里 **164 个悬空**，`dsh-tools` 就是其中之一）。
+
+静态 import 失败会让**整个插件 entry 挂掉**（连客户端设置页一起消失），代价远大于"工具不可用"，
+所以这里选择降级而不是硬依赖。这是有意的偏离，不是没按规范写。
+
 **客户端（`lib/client.js`）是 `window.__ModuleLoader__.load({id, factory})` 的经典脚本。**
 不是 ESM（`export` 会语法错），也不是 CJS（没有裸 `exports`）。`id` 必须等于包名，
 React 必须 `require('react')`（dsh web 没有全局 React）。现成样例：
