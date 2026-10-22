@@ -78,8 +78,9 @@
 | 步骤 | 做什么 |
 |---|---|
 | 1 | 把包装进 profile |
-| 2 | 把包名写进 profile 的 `dsh.profile.bundles` |
-| 3 | 重启 DSH，浏览器硬刷新 |
+| 2 | 下载登录用的浏览器（约 200 MB，只需一次） |
+| 3 | 把包名写进 profile 的 `dsh.profile.bundles` |
+| 4 | 重启 DSH，浏览器硬刷新 |
 
 ### 1. 把包装进 profile
 
@@ -96,7 +97,23 @@ git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
-### 2. 把包名写进 profile 的 bundles
+### 2. 下载登录用的浏览器
+
+扫码登录和抓取都走真实浏览器，而 `pnpm add` **不会**下载这些二进制。装完包后在插件所在目录跑一次：
+
+```bash
+# 源码安装：就是 clone 下来的目录
+# 注册表安装：~/.dsh/profiles/web/node_modules/dsh-plugin-tieba
+npx playwright install chromium
+```
+
+约 200 MB，只需一次。
+
+> **跳过这步的表现**：设置页点「重新扫码登录」后，二维码位置是空白或破图——因为 `chromium.launch()` 抛了「Executable doesn't exist」。
+>
+> 机器上已经装过别的 Playwright 不代表够用：浏览器版本必须和**本插件依赖的 playwright 版本**对应。版本不一致时报错里会给出两个不同的 revision 号（例如已装 `chromium-1223`、需要 `chromium-1248`），照着报错跑一次上面的命令即可。
+
+### 3. 把包名写进 profile 的 bundles
 
 ```jsonc
 // ~/.dsh/profiles/web/package.json
@@ -115,7 +132,7 @@ cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 
 > **这一步不能省。** 插件是靠 `dsh.bundle.patch` 把 `id: tieba` 这一行插进 Loader 树的——包装进了 `node_modules` 但没进 bundles，等于装了一个不会被加载的包：设置页没有入口，工具也不会注册。`dsh plugin … add` 走的是 pnpm，不会替你改这个列表。
 
-### 3. 重启
+### 4. 重启
 
 重启 DSH。profile 开了 HMR 的话配置改动会自动生效，但客户端 bundle 的 `rev` 是按文件 `mtime`/`ctime`/size 算的，改过 `lib/client.js` 仍然要重启；之后浏览器再硬刷新一次。
 
