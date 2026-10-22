@@ -53,17 +53,14 @@
     "status": "node src/cli.mjs status"
   },
   "dependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
     "playwright-core": "^1.49.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-tools": "*"
+    "@deepseek-ai/cordis": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-tools": {
       "optional": true
     }
   },
