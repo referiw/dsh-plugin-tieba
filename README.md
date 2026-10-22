@@ -82,51 +82,59 @@
 |---|---|---|
 | DSH ≥ 0.2.0 | 必需 | `engines.dsh` 校验，不匹配整包跳过而不是半加载 |
 | Node ≥ 20 | 必需 | 插件宿主侧跑在 DSH 自带的 Node 上，通常无需单独装 |
-| chromium 系浏览器 | 必需 | 二选一：独立 headless shell（下载约 118 MB）或系统 Chrome / Edge（0 MB） |
+| chromium 系浏览器 | 必需（通常已具备） | Windows / macOS 自带 Edge 或装了 Chrome 就能直接用；没有时才需装 headless shell（约 118 MB） |
 | `ffmpeg` / `ffprobe` | 可选 | 装了才会压缩图片；没装就跳过压缩，原图照常保存 |
 
 | 步骤 | 做什么 |
 |---|---|
-| 1 | 把包装进 profile |
-| 2 | 准备浏览器：装独立 headless shell（下载约 118 MB）或用系统 Chrome / Edge（0 MB） |
-| 3 | 把包名写进 profile 的 `dsh.profile.bundles` |
-| 4 | 重启 DSH，浏览器硬刷新 |
+| 1 | `dsh plugin … add` —— 依赖和 `dsh.profile.bundles` 一起写好，不用手工编辑 |
+| 2 | 重启 DSH，浏览器硬刷新 |
 
-### 1. 把包装进 profile
+只有两种情况需要额外操作：**系统里没有 Chrome / Edge**（见第 2 节），或者**从源码 link 安装**（pnpm 不会替你改 bundles，见第 1 节末尾）。
+
+### 1. 装包
 
 ```bash
 dsh plugin --profile web add dsh-plugin-tieba
 ```
 
-从源码装也行（改代码时更方便）：
+它做两件事：装依赖，并把包名追加到 profile 的 `dsh.profile.bundles`。装完可以直接验证合成结果里有没有这一行：
+
+```bash
+dsh --profile web --dump-config | grep -A2 'id: tieba'
+```
+
+从源码装也行（改代码时更方便），但**这条路要多一步**：
 
 ```bash
 git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
+`pnpm add link:` 是直接调 pnpm，不会改 bundles，需要手工把 `"dsh-plugin-tieba"` 追加到 `~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles` 数组末尾。少了这一步，包装上了但不会被加载：设置页没入口、工具也不注册——插件是靠 `dsh.bundle.patch` 把 `id: tieba` 那一行插进 Loader 树的。
+
 > 如果 `pnpm` 走的是国内镜像（npmmirror）而它还没索引到这个包，会报 `No matching version found`。等几分钟同步，或者临时指定官方源：
 > ```bash
 > pnpm add dsh-plugin-tieba --registry=https://registry.npmjs.org
 > ```
 
-### 2. 准备浏览器（二选一）
+### 2. 准备浏览器（通常可以跳过）
 
-贴吧对**未登录**的请求一律回「百度安全验证」页（滑块），`fetch` / `curl` 连正文都拿不到——实测模拟 Chrome 的 TLS 指纹也没用，能拿到楼层内容的只有真实浏览器引擎。所以要有一份 chromium 系浏览器：
+**先判断这步要不要做**：Windows / macOS 基本都自带 Edge 或装了 Chrome，插件会直接用系统浏览器——整节跳过即可。
 
-**A. 装独立 headless shell（下载约 118 MB）** —— 不依赖系统装没装浏览器，隔离在本插件里：
+只有在系统里没有任何 chromium 系浏览器时才需要（多见于干净的 Linux 服务器）：
 
 ```bash
+# 装一份独立的 headless shell（下载约 118 MB）
 cd ~/.dsh/profiles/web/node_modules/dsh-plugin-tieba   # 源码安装则是 clone 下来的目录
 npx playwright-core install chromium --only-shell
-```
 
-**B. 用系统已有的浏览器（0 MB）** —— Windows / macOS 一般自带 Edge 或装了 Chrome，什么都不用做。Linux 服务器通常要装一个：
-
-```bash
+# 或者用包管理器装系统浏览器
 sudo apt install chromium
 export DSH_TIEBA_CHROME=/usr/bin/chromium   # 或者直接指定已有二进制
 ```
+
+为什么非要浏览器：贴吧对**未登录**的请求一律回「百度安全验证」页，`fetch` / `curl` 连正文都拿不到（实测模拟 Chrome 的 TLS 指纹也没用），能拿到楼层内容的只有真实浏览器引擎。
 
 插件按这个顺序找，第一个能起来的胜出：
 
@@ -144,26 +152,7 @@ npm run check-browser    # 打印实际选中的浏览器与版本
 
 > 两样都没有时的表现：设置页点「重新扫码登录」后，二维码位置会直接显示提示和上面两条安装命令，不会只丢一句 `Executable doesn't exist`。
 
-### 3. 把包名写进 profile 的 bundles
-
-```jsonc
-// ~/.dsh/profiles/web/package.json
-{
-  "dsh": {
-    "profile": {
-      "bundles": [
-        "@deepseek-ai/dsh-base",
-        "@deepseek-ai/dsh-web-app",
-        "dsh-plugin-tieba"
-      ]
-    }
-  }
-}
-```
-
-> **这一步不能省。** 插件是靠 `dsh.bundle.patch` 把 `id: tieba` 这一行插进 Loader 树的——包装进了 `node_modules` 但没进 bundles，等于装了一个不会被加载的包：设置页没有入口，工具也不会注册。`dsh plugin … add` 走的是 pnpm，不会替你改这个列表。
-
-### 4. 重启
+### 3. 重启
 
 重启 DSH。profile 开了 HMR 的话配置改动会自动生效，但客户端 bundle 的 `rev` 是按文件 `mtime`/`ctime`/size 算的，改过 `lib/client.js` 仍然要重启；之后浏览器再硬刷新一次。
 
