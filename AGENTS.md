@@ -87,7 +87,7 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 | `lib/paths.mjs` | 所有运行期路径 | 只在这里拼路径 |
 | `lib/browser.mjs` | 定位并启动浏览器 | 别退回"绑定 playwright 版本"的写法，见下文 |
 | `scripts/check-browser.mjs` | 诊断：打印选中的浏览器 | 只读，不改状态，可随时跑 |
-| `displayPath()`（core） | 对外展示路径 | 默认返回**绝对路径**（读图工具不展开 `~`，相对路径只在 cwd=家目录时成立）；`DSH_TIEBA_PATH_STYLE=home` 才切回 `~/...` |
+| `displayPath()`（core） | 对外展示路径 | 默认返回**绝对路径**；`DSH_TIEBA_PATH_STYLE=rel` 给相对 cwd 的路径（cwd=家目录时最干净），`=home` 给 `~/...`（调用方需自行展开） |
 | `src/cli.mjs` | 命令行 | 薄封装，不写业务逻辑 |
 | `src/login.mjs` | 扫码登录 | 登录判定必须同源发起（CORS） |
 
