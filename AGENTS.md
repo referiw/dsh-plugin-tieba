@@ -30,37 +30,32 @@
 
 ## DSH 插件契约（错一条整棵树起不来）
 
-**工具用官方 `defineTool`，静态引入，别自己拼 schema。**
+**工具注册：优先用宿主的 `defineTool`，拿不到就本地编译。别静态 import 宿主包。**
 
 ```js
-import { defineTool } from '@deepseek-ai/dsh-tools';
-
-ctx.tools.register(defineTool({
-  name, description,
-  parameters: { tid: { type: 'string', required: true, description: '…' } },
-  output: { schema: { type: 'object', additionalProperties: true }, render: (a, v) => [...] },
-  async execute(args) { … },
-}));
+let hostDefineTool = null;
+try {
+  const mod = await import('@deepseek-ai/dsh-tools');
+  if (typeof mod?.defineTool === 'function') hostDefineTool = mod.defineTool;
+} catch { /* 桌面版解析不到：正常情况 */ }
+const defineTool = defineToolWith(hostDefineTool);   // lib/tool-schema.mjs
 ```
 
-`defineTool` 负责把 `{ 参数名: { type, required, description } }` 编译成 JSON Schema、校验入参、
-收口 output。**不要手写 JSON Schema，也不要自己实现编译兜底**——曾经这么干过（0.2.0/0.2.1），
-理由是不信任宿主投影，结果把一个 20 行的注册写成了 80 行，还被 API 拒过。
+`defineTool` 把 `{ 参数名: { type, required, description } }` 编译成 JSON Schema、校验入参、收口 output。
+**空参数必须产出 `{ type:'object', properties:{} }`**——漏了会让 API 以 `Invalid schema for function`
+拒掉**整轮请求**（对话卡死，不只是工具不可用）。这是 0.2.0 的 bug。
 
-**依赖必须放 `dependencies`，不能只放 `peerDependencies`。** 这一条容易被 review 挑，所以写清楚：
+**为什么不能像官方包那样静态 import：**
 
-- 官方包（如 `@deepseek-ai/dsh-tool-todo`）是静态 import，靠宿主把安装包投影到
-  `$DSH_HOME/profiles/node_modules` 来解析——那是**第一方**包的特权；
-- 第三方插件没有这个投影保障：桌面版的包在 `app.asar` 里，junction 指不进 asar；
-  实测某台机器 `profiles/node_modules` 187 项里 164 项是悬空 junction；
-- 而 pnpm 默认不装 peer（本仓库 `.npmrc` 也是 `auto-install-peers=false`），只声明 peer
-  等于运行期 `ERR_MODULE_NOT_FOUND`。
+- 官方包（`@deepseek-ai/dsh-tool-todo`）活在 DSH 安装内部，peer 全都在；
+- 第三方插件不一样：**桌面版把 DSH 打进 `app.asar`**，插件按名字解析不到 `@deepseek-ai/*`
+  （Windows junction 指不进 asar，`profiles/node_modules` 里的投影实测大量悬空）；
+- 把 `@deepseek-ai/dsh-tools` 声明成普通依赖也不行：它自己带十来个 host peer
+  （`cordis` / `dsh-agent` / `dsh-llm` / `dsh-session` …），装进来等于把半个宿主拖进 profile，
+  版本还对不上。**0.2.2 就是这么坏的**：安装成功、启动时 `ERR_MODULE_NOT_FOUND`，插件直接不加载。
 
-所以这里把 `@deepseek-ai/dsh-tools` 声明成普通依赖，版本**跟宿主 DSH 对齐**
-（当前 `0.2.1-rc.2`）。代价是多一份约 150 KB 的副本，换的是 link: 装、npm 装、任何机器都一致。
-升级 DSH 时记得同步这个版本号。
-
-> 注意它 npm 上的 `latest` 是 `0.0.1-rc.1`，`0.2.1-rc.2` 在 `next` tag 下——安装时要写精确版本。
+所以正确结构是：package.json 里声明成 **optional peer**（表意，不安装）+ 运行时动态 import + 本地编译兜底。
+这不是绕规范，是桌面版分发下的唯一可行解。**别把它"优化"成静态 import。**
 
 **工具 schema 是启动时注册的。** 换包/升级插件后必须重启 DSH，否则进程里还是旧注册——
 旧版本有问题时会表现为"升级了但还是报同一个错"。
