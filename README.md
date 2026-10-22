@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="https://www.npmjs.com/package/dsh-plugin-tieba"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-tieba.svg"></a>
   <img alt="node" src="https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg">
   <img alt="dsh" src="https://img.shields.io/badge/dsh-%3E%3D0.2.0-blueviolet.svg">
 </p>
@@ -93,18 +94,21 @@
 
 ### 1. 把包装进 profile
 
-注册表发布之后：
-
 ```bash
 dsh plugin --profile web add dsh-plugin-tieba
 ```
 
-从源码（现在就能用）：
+从源码装也行（改代码时更方便）：
 
 ```bash
 git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
+
+> 如果 `pnpm` 走的是国内镜像（npmmirror）而它还没索引到这个包，会报 `No matching version found`。等几分钟同步，或者临时指定官方源：
+> ```bash
+> pnpm add dsh-plugin-tieba --registry=https://registry.npmjs.org
+> ```
 
 ### 2. 准备浏览器（二选一）
 
