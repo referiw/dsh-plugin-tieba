@@ -55,14 +55,7 @@
   "dependencies": {
     "playwright-core": "^1.49.0"
   },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    }
-  },
+
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
