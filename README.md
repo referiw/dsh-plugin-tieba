@@ -82,6 +82,8 @@ dsh plugin --profile <profile> add dsh-plugin-tieba
 
 这条命令会同时写 `dependencies` 和 `dsh.profile.bundles`，**不用手工编辑**。装完重启 DSH，浏览器硬刷新一次。
 
+> **升级插件后也要重启**（不只是第一次装）：工具 schema 是在启动时注册的，不重启会继续用旧的那份。旧版本有问题时，症状就是对话被 API 直接拒绝。
+
 **浏览器**：插件要用真实浏览器渲染贴吧页面，但通常不用额外装——Windows / macOS 自带 Edge 或装了 Chrome 就够了。只有系统里找不到任何 chromium 系浏览器时（多见于干净的 Linux 服务器）：
 
 ```bash

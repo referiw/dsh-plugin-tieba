@@ -40,14 +40,21 @@ try {
   const m = await import('@deepseek-ai/dsh-tools');
   if (typeof m?.defineTool === 'function') hostDefineTool = m.defineTool;
 } catch { /* 宿主没暴露 */ }
-const defineTool = hostDefineTool || localDefineTool;
+const defineTool = defineToolWith(hostDefineTool);   // lib/tool-schema.mjs
 ```
 
-**兜底不能是恒等函数，必须自己编译成 JSON Schema。**
+**兜底不能是恒等函数，必须自己编译成 JSON Schema，而且要校验宿主的产物。**
 `@deepseek-ai/dsh-tools` 是 peerDependency，**从 npm 安装时解析不到**（pnpm 不替插件装 peer），
 于是恒等兜底会把 `parameters: {}` 原样下发；DeepSeek API 看到 `{"type": null}` 会报
 `Invalid schema for function 'xxx'`，而且拒绝的是**整轮请求**——表现为对话彻底卡死，
-不只是这个工具不可用。这就是 0.2.0 发布版的 bug。空参数也要产出 `{ type:'object', properties:{} }`。
+不只是这个工具不可用。这就是 0.2.0 发布版的 bug。
+
+`lib/tool-schema.mjs` 的 `defineToolWith(host)` 因此做了两层：宿主的产物 `isUsableSchema()`
+就采用，否则（缺失 / 抛异常 / `type` 不是 `object`）退回本地编译。不同 DSH 版本对空参数的处理
+并不一致，不能假设宿主一定对。空参数也必须产出 `{ type:'object', properties:{} }`。
+
+**工具 schema 是启动时注册的。** 换包/升级插件后必须重启 DSH，否则进程里还是旧注册——
+旧版本有问题时会表现为"升级了但还是报同一个错"。
 
 **客户端（`lib/client.js`）是 `window.__ModuleLoader__.load({id, factory})` 的经典脚本。**
 不是 ESM（`export` 会语法错），也不是 CJS（没有裸 `exports`）。`id` 必须等于包名，
