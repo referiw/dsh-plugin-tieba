@@ -1,0 +1,74 @@
+{
+  "name": "dsh-plugin-tieba",
+  "version": "0.1.0",
+  "description": "只读百度贴吧的 DeepSeek Harness 插件：全量翻页、动态抽样、楼中楼、按楼层取图",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "tieba",
+    "baidu",
+    "scraper"
+  ],
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "tieba": "./src/cli.mjs"
+  },
+  "files": [
+    "lib/",
+    "src/",
+    "cordis.patch.yml",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "login": "node src/login.mjs",
+    "status": "node src/cli.mjs status"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  }
+}

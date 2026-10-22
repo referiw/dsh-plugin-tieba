@@ -1,0 +1,13 @@
+# dsh-plugin-tieba —— 只读贴吧
+# 装法：pnpm add 到 profile，并把包名写进 package.json 的 dsh.profile.bundles
+- insert:
+    - id: tieba
+      name: 'dsh-plugin-tieba'
+      config:
+        gapMs: 4000
+        sampleMode: dynamic
+        sampleMin: 50
+        sampleMax: 300
+        truncateText: false
+        maxTextChars: 2000
+        imageMaxArea: 1200000
