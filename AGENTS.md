@@ -61,6 +61,7 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 | `lib/client.js` | 设置页 UI | 必须是 `__ModuleLoader__` 外壳 |
 | `lib/config-store.mjs` | 配置读写（JSON + mtime 缓存） | 工具调用时重读，改完即时生效 |
 | `lib/paths.mjs` | 所有运行期路径 | 只在这里拼路径 |
+| `displayPath()`（core） | 对外展示路径 | 输出一律相对家目录，**不要写绝对路径**（会泄露用户名） |
 | `src/cli.mjs` | 命令行 | 薄封装，不写业务逻辑 |
 | `src/login.mjs` | 扫码登录 | 登录判定必须同源发起（CORS） |
 
