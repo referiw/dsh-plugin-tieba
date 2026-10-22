@@ -78,7 +78,7 @@
 | 步骤 | 做什么 |
 |---|---|
 | 1 | 把包装进 profile |
-| 2 | 确认系统里有 Chrome / Edge（插件不自带浏览器） |
+| 2 | 准备浏览器：装独立 headless shell（下载约 118 MB）或用系统 Chrome / Edge（0 MB） |
 | 3 | 把包名写进 profile 的 `dsh.profile.bundles` |
 | 4 | 重启 DSH，浏览器硬刷新 |
 
@@ -97,32 +97,36 @@ git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
-### 2. 准备浏览器
+### 2. 准备浏览器（二选一）
 
-**插件不自带浏览器**，它驱动你系统里已经装好的 Chrome / Edge / Chromium。
+贴吧的页面有 TLS / HTTP 指纹校验，`fetch` / `curl` 拿到的是「百度安全验证」403，楼层必须由真实浏览器引擎渲染出来。所以要有一份 chromium 系浏览器：
 
-为什么需要：贴吧的页面有 TLS / HTTP 指纹校验，`fetch` / `curl` 拿到的是「百度安全验证」403，楼层必须由真实浏览器引擎渲染出来。
-
-但"需要浏览器"不等于"要下载一份 Chromium"——自带的那份要 **约 320 MB**（chromium + headless shell），用系统的则是 **0**。解析顺序：
-
-```
-DSH_TIEBA_CHROME 指定的可执行文件 → 系统 Chrome → 系统 Edge → 系统 Chromium → 完整版 playwright（如果另装了）
-```
-
-Windows / macOS 通常不用做任何事。Linux 服务器一般要装一个：
+**A. 装独立 headless shell（下载约 118 MB）** —— 不依赖系统装没装浏览器，版本由插件自己钉住：
 
 ```bash
-sudo apt install chromium              # Debian/Ubuntu，包名视发行版而定
+npx playwright-core install chromium --only-shell
+```
+
+**B. 用系统已有的浏览器（0 MB）** —— Windows / macOS 一般自带 Edge 或装了 Chrome，什么都不用做。Linux 服务器通常要装一个：
+
+```bash
+sudo apt install chromium
 export DSH_TIEBA_CHROME=/usr/bin/chromium   # 或者直接指定已有二进制
+```
+
+插件按这个顺序找，第一个能起来的胜出：
+
+```
+DSH_TIEBA_CHROME → 自带 headless shell（装了就用）→ 系统 Chrome → 系统 Edge → 系统 Chromium
 ```
 
 排查用：
 
 ```bash
-npm run check-browser    # 打印实际会选中的浏览器与版本
+npm run check-browser    # 打印实际选中的浏览器与版本
 ```
 
-> 全都没有时的表现：设置页点「重新扫码登录」后二维码位置会直接显示缺浏览器的提示，并给出上面三条解决办法。不会只留一句 `Executable doesn't exist`。
+> 两样都没有时的表现：设置页点「重新扫码登录」后，二维码位置会直接显示提示和上面两条安装命令，不会只丢一句 `Executable doesn't exist`。
 
 ### 3. 把包名写进 profile 的 bundles
 
