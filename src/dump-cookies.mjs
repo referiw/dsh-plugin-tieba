@@ -1,12 +1,14 @@
+import path from 'node:path';
 import { chromium } from 'playwright';
+import { PROFILE_DIR, HOME_DIR } from '../lib/paths.mjs';
 import fs from 'node:fs';
 
 // 用法：node dump-cookies.mjs <domain> <out.json> [先访问的URL]
 const domain = process.argv[2] || 'baidu.com';
-const out = process.argv[3] || '/home/ubuntu/dump.cookies.json';
+const out = process.argv[3] || path.join(HOME_DIR, 'dump.cookies.json');
 const warm = process.argv[4] || '';
 
-const ctx = await chromium.launchPersistentContext('/home/ubuntu/dsh-plugin-tieba/.runtime/profile', {
+const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
   headless: true,
   viewport: { width: 1280, height: 900 },
   locale: 'zh-CN',

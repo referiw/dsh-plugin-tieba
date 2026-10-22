@@ -11,8 +11,9 @@
  *
  * 退出码：0=登录成功  3=超时  1=启动失败
  */
+import path from 'node:path';
 import { chromium } from 'playwright';
-import { PROFILE_DIR, COOKIE_FILE, ensureHome } from '../lib/paths.mjs';
+import { PROFILE_DIR, COOKIE_FILE, HOME_DIR, ensureHome } from '../lib/paths.mjs';
 import fs from 'node:fs';
 
 const SITES = {
@@ -51,8 +52,10 @@ const DOMAIN = arg('domain', cfg?.domain);
 const CHECK = arg('check', cfg?.check);
 const OKPATH = arg('okPath', cfg?.okPath);
 const OKVAL = arg('okValue', cfg?.okValue ?? true);
-const SHOT = arg('shot', `/home/ubuntu/login-${site || 'page'}.png`);
-const OUT = arg('out', `/home/ubuntu/login-${site || 'page'}.cookies.json`);
+ensureHome();
+const SHOT = arg('shot', path.join(HOME_DIR, `login-${site || 'page'}.png`));
+// tieba 的 cookie 直接落到内核读取的位置，省得再拷一次
+const OUT = arg('out', site === 'tieba' ? COOKIE_FILE : path.join(HOME_DIR, `login-${site || 'page'}.cookies.json`));
 const TIMEOUT_S = Number(arg('timeout', '600'));
 const LABEL = cfg?.label ?? DOMAIN;
 
