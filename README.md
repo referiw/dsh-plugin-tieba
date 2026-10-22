@@ -117,8 +117,10 @@ export DSH_TIEBA_CHROME=/usr/bin/chromium   # 或者直接指定已有二进制
 插件按这个顺序找，第一个能起来的胜出：
 
 ```
-DSH_TIEBA_CHROME → 自带 headless shell（装了就用）→ 系统 Chrome → 系统 Edge → 系统 Chromium
+DSH_TIEBA_CHROME → 磁盘上已装的 headless shell / chromium（新版本优先）→ 系统 Chrome → 系统 Edge → 系统 Chromium
 ```
+
+**浏览器版本不需要和插件依赖的 `playwright-core` 严格对应。** 插件直接扫描 `ms-playwright` 目录里的可执行文件，用路径启动，不依赖 Playwright 的版本映射——所以升级插件不会让已经下载好的浏览器作废。（实测：`playwright-core` 1.64 能正常驱动 `chromium_headless_shell-1223`，即 Chrome 148。）
 
 排查用：
 

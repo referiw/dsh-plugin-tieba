@@ -53,7 +53,7 @@
     "status": "node src/cli.mjs status"
   },
   "dependencies": {
-    "playwright-core": "^1.64.1"
+    "playwright-core": "^1.49.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
