@@ -2,3 +2,4 @@ node_modules/
 .dsh-tieba/
 *.log
 .DS_Store
+*.tgz
