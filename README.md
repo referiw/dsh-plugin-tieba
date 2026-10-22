@@ -65,7 +65,7 @@ dsh plugin --profile web add dsh-plugin-tieba
 从源码安装（现在就能用）：
 
 ```bash
-git clone <repo> ~/dsh-plugin-tieba
+git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
@@ -275,6 +275,17 @@ window.__ModuleLoader__.load({
 `lib/index.js` 注入 `tools` 与 `webServer`；`apply` 里任何异常都被兜住，不会把整棵插件树带下去。
 `@deepseek-ai/dsh-tools` 是**动态** import 的——以 `link:` 安装时 Node 按 realpath 解析，静态 import
 会在模块加载阶段就抛。
+
+## 彩蛋
+
+<details>
+<summary>真实使用现场（点开）</summary>
+
+<img src="docs/demo.png" width="720" alt="在 DSH 里让它去 deepseek 吧读几个帖子之后的输出">
+
+> 截图里是贴吧用户的原始发言摘要，不代表本项目立场；昵称、立场词与帖子 id 都没有做处理。
+
+</details>
 
 ## 许可
 

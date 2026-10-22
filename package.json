@@ -5,6 +5,14 @@
   "type": "module",
   "license": "MIT",
   "icon": "./icon.svg",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/referiw/dsh-plugin-tieba.git"
+  },
+  "homepage": "https://github.com/referiw/dsh-plugin-tieba#readme",
+  "bugs": {
+    "url": "https://github.com/referiw/dsh-plugin-tieba/issues"
+  },
   "keywords": [
     "dsh",
     "deepseek-harness",
