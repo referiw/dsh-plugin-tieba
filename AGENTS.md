@@ -30,34 +30,36 @@
 
 ## DSH 插件契约（错一条整棵树起不来）
 
-**工具注册：优先用宿主的 `defineTool`，拿不到就本地编译。别静态 import 宿主包。**
+**工具用官方 `defineTool`，静态 import，声明成 peer（不是 dependency）。**
 
 ```js
-let hostDefineTool = null;
-try {
-  const mod = await import('@deepseek-ai/dsh-tools');
-  if (typeof mod?.defineTool === 'function') hostDefineTool = mod.defineTool;
-} catch { /* 桌面版解析不到：正常情况 */ }
-const defineTool = defineToolWith(hostDefineTool);   // lib/tool-schema.mjs
+import { defineTool } from '@deepseek-ai/dsh-tools';
+
+ctx.tools.register(defineTool({
+  name, description,
+  parameters: { tid: { type: 'string', required: true, description: '…' } },
+  output: { schema: { type: 'object', additionalProperties: true }, render: (a, v) => [...] },
+  async execute(args) { … },
+}));
 ```
 
 `defineTool` 把 `{ 参数名: { type, required, description } }` 编译成 JSON Schema、校验入参、收口 output。
-**空参数必须产出 `{ type:'object', properties:{} }`**——漏了会让 API 以 `Invalid schema for function`
+**空参数也必须产出 `{ type:'object', properties:{} }`**——漏了会让 API 以 `Invalid schema for function`
 拒掉**整轮请求**（对话卡死，不只是工具不可用）。这是 0.2.0 的 bug。
 
-**为什么不能像官方包那样静态 import：**
+**宿主会在加载器里解析 `@deepseek-ai/*`**，所以静态 import 可行。实测：干净 `DSH_HOME` 里装本插件
+（0.2.4，静态 import）后启动，无 `ERR_MODULE`、`/tieba/api/status` 返回 200。
+反例是普通 `node` 直接跑——它没有宿主的映射，会 `ERR_MODULE_NOT_FOUND`，别拿它当判据。
 
-- 官方包（`@deepseek-ai/dsh-tool-todo`）活在 DSH 安装内部，peer 全都在；
-- 第三方插件不一样：**桌面版把 DSH 打进 `app.asar`**，插件按名字解析不到 `@deepseek-ai/*`
-  （Windows junction 指不进 asar）；
-- 把 `@deepseek-ai/dsh-tools` 声明成普通依赖更糟——**官方 advisory 明确禁止插件直接依赖框架内部包**。
-  见 [deepseek-harness#1496](https://github.com/deepseek-ai/deepseek-harness/discussions/1496) 的 #1486：
-  pnpm 会把插件的传递依赖 `@deepseek-ai/*` hoist 到 profile 顶层，同一进程出现两份 dsh-tools，
-  模块内 `Symbol('x')` 跨实例不相等 → `ctx.tools[symbol]` 为 undefined → **每次工具调用都失败**
-  （`Cannot read properties of undefined (reading 'prepare')`）。0.2.2 就是这样：装得上、跑不了。
+**千万别把 `@deepseek-ai/*` 放进 `dependencies`。** 0.2.2 这么干过，两个后果：
 
-所以正确结构是：package.json 里声明成 **optional peer**（表意，不安装）+ 运行时动态 import + 本地编译兜底。
-这不是绕规范，是 advisory 要求的方向。**别把它"优化"成静态 import。**
+1. 它自带的 host peer（`cordis` / `dsh-agent` / `dsh-llm` …）在 profile 里解析不到 → 启动即崩；
+2. 即使 peer 齐了也会撞 [#1486](https://github.com/deepseek-ai/deepseek-harness/discussions/1496)：
+   同进程出现两份 `dsh-tools`，模块内 `Symbol('x')` 跨实例不相等 → `ctx.tools[symbol]` 为 undefined →
+   **每次工具调用都失败**（`reading 'prepare'`），还会污染会话。官方 advisory 建议第 9 条说得更直接：
+   插件不应直接依赖框架内部包。
+
+正确姿势：`peerDependencies`（表意，不安装，范围可以放宽以兼容多个 DSH 版本）+ 静态 import。
 
 **工具 schema 是启动时注册的。** 换包/升级插件后必须重启 DSH，否则进程里还是旧注册——
 旧版本有问题时会表现为"升级了但还是报同一个错"。
