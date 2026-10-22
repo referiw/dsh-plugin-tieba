@@ -78,7 +78,7 @@
 | 步骤 | 做什么 |
 |---|---|
 | 1 | 把包装进 profile |
-| 2 | 下载登录用的浏览器（约 200 MB，只需一次） |
+| 2 | 确认系统里有 Chrome / Edge（插件不自带浏览器） |
 | 3 | 把包名写进 profile 的 `dsh.profile.bundles` |
 | 4 | 重启 DSH，浏览器硬刷新 |
 
@@ -97,22 +97,32 @@ git clone https://github.com/referiw/dsh-plugin-tieba ~/dsh-plugin-tieba
 cd ~/.dsh/profiles/web && pnpm add link:~/dsh-plugin-tieba
 ```
 
-### 2. 下载登录用的浏览器
+### 2. 准备浏览器
 
-**必须**，而且两个环节都依赖它：扫码登录要开真浏览器渲染百度登录页再截二维码；抓取要走移动版页面、每页新开一个上下文。它不是可选的加速项。
+**插件不自带浏览器**，它驱动你系统里已经装好的 Chrome / Edge / Chromium。
 
-`playwright` 已经在 `dependencies` 里，但**浏览器二进制不是 npm 包**，没法写进依赖树——只能靠安装脚本或手动跑一次：
+为什么需要：贴吧的页面有 TLS / HTTP 指纹校验，`fetch` / `curl` 拿到的是「百度安全验证」403，楼层必须由真实浏览器引擎渲染出来。
 
-```bash
-# 注册表安装：postinstall 会自动尝试下载（约 200 MB，已装则秒过）
-# 从源码 link 安装：pnpm 不会执行目标包的 postinstall，必须手动跑
-cd ~/dsh-plugin-tieba           # 或 ~/.dsh/profiles/web/node_modules/dsh-plugin-tieba
-npx playwright install chromium # 等价于 npm run setup
+但"需要浏览器"不等于"要下载一份 Chromium"——自带的那份要 **约 320 MB**（chromium + headless shell），用系统的则是 **0**。解析顺序：
+
+```
+DSH_TIEBA_CHROME 指定的可执行文件 → 系统 Chrome → 系统 Edge → 系统 Chromium → 完整版 playwright（如果另装了）
 ```
 
-> **跳过这步的表现**：设置页点「重新扫码登录」后，二维码位置是空白或破图，失败原因会直接显示在下面——`chromium.launch()` 抛「Executable doesn't exist」。
->
-> 机器上已经装过别的 Playwright 不代表够用：浏览器版本必须和**本插件依赖的 playwright 版本**对应。版本不一致时报错里会给出两个不同的 revision 号（例如已装 `chromium-1223`、需要 `chromium-1248`），照着报错跑一次上面的命令即可。
+Windows / macOS 通常不用做任何事。Linux 服务器一般要装一个：
+
+```bash
+sudo apt install chromium              # Debian/Ubuntu，包名视发行版而定
+export DSH_TIEBA_CHROME=/usr/bin/chromium   # 或者直接指定已有二进制
+```
+
+排查用：
+
+```bash
+npm run check-browser    # 打印实际会选中的浏览器与版本
+```
+
+> 全都没有时的表现：设置页点「重新扫码登录」后二维码位置会直接显示缺浏览器的提示，并给出上面三条解决办法。不会只留一句 `Executable doesn't exist`。
 
 ### 3. 把包名写进 profile 的 bundles
 
@@ -277,10 +287,13 @@ dsh-plugin-tieba/
 │   ├── server.mjs        # 设置页用的 HTTP 接口（仅限本机）
 │   ├── config-store.mjs  # 配置读写
 │   ├── paths.mjs         # 运行期路径
+│   ├── browser.mjs       # 定位系统 Chrome/Edge 并启动（不自带 Chromium）
 │   └── emoticon-names.json
 ├── src/
 │   ├── cli.mjs           # 命令行
 │   └── login.mjs         # 扫码登录（独立跑，不依赖 DSH）
+├── scripts/
+│   └── check-browser.mjs # 打印实际选中的浏览器，排查"打不开"用
 ├── locale/
 │   ├── en.json           # 插件展示元信息（meta.title / meta.description）
 │   └── zh.json
