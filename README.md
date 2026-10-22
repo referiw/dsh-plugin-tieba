@@ -204,7 +204,19 @@ tieba thread 1234567890 --json  # 结构化输出
 
 ## 安全
 
-`/tieba/api/*` **仅限本机访问**。判据不是只看 `remoteAddress`——反向代理转发时连接同样来自 `127.0.0.1`，公网请求会被误判成本机。所以要同时满足：连接来自回环地址，且没有任何转发头（`X-Forwarded-For` / `X-Real-IP` / `Forwarded` / `X-Forwarded-Host`）。不满足返回 `403 forbidden: local access only`。
+`/tieba/api/*` 沿用 DSH 自己 `/api` 的信任模型：**认 Host，不认连接地址**。
+
+- 默认只接受回环地址（`127.0.0.1` / `::1` / `localhost`）；
+- `sec-fetch-site: cross-site` 一律拒绝；带 `Origin` 时必须与 `Host` 同源（挡 CSRF）；
+- **公网 / 反向代理 / 网关插件部署**：请求的 Host 是你的域名，需要显式放行，否则 403：
+
+  ```bash
+  export DSH_TIEBA_TRUSTED_HOST=tieba.example.com   # 多个用逗号分隔
+  ```
+
+  403 的响应体里会带上你的 Host 和这句提示，照着设置就行。为什么不看 `X-Forwarded-For`：代理后面所有请求都来自 `127.0.0.1`，按连接地址判会把本地访问也误杀。
+
+> 这些接口**没有身份认证**，只有上面这套浏览器信任栅栏。公网部署时请确保 DSH 本身需要登录，或者在反向代理层再加一层（Basic Auth / IP 白名单）。
 
 对外只交流 `application/json` 与 `image/png`（登录二维码），不提供文件下载或 HTML 通道；请求体上限 64KB。
 
