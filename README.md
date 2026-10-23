@@ -86,6 +86,30 @@ dsh plugin --profile <profile> add dsh-plugin-tieba
 
 > **桌面版注意**：`desktop` profile 由 Electron 独占管理，命令行会直接拒绝（`profile "desktop" is managed exclusively by the Electron application`）。桌面用户请走 **设置 → 插件** 安装，或用 `--profile web` 起一个独立 profile。
 
+### 从 GitHub 安装（想跳过 npm 发布时）
+
+```bash
+# 跟 tag（推荐，可复现）
+dsh plugin --profile <profile> add github:referiw/dsh-plugin-tieba#v0.3.5
+# 跟 master 最新
+dsh plugin --profile <profile> add github:referiw/dsh-plugin-tieba
+```
+
+仓库里直接提交了 `lib/`，没有构建步骤，装完即可用（服务器需要有 `git`）。
+
+> **装完自检一次**：`dsh plugin add` 在某些失败路径下会回滚 `package.json` 和锁文件，但**不清理已经装进去的 `node_modules`**，于是出现「manifest 写旧版本、磁盘是新版本」，下一次 `pnpm install` 会把它悄悄降回去。
+>
+> ```bash
+> node -e "console.log(require(process.env.HOME+'/.dsh/profiles/<profile>/node_modules/dsh-plugin-tieba/package.json').version)"
+> ```
+>
+> 想彻底避免，可以绕过 `dsh plugin`，直接在 profile 里用 pnpm（锁文件会钉到具体 commit）：
+>
+> ```bash
+> cd ~/.dsh/profiles/<profile>
+> pnpm add github:referiw/dsh-plugin-tieba
+> ```
+
 > **升级插件后也要重启**（不只是第一次装）：工具 schema 是在启动时注册的，不重启会继续用旧的那份。旧版本有问题时，症状就是对话被 API 直接拒绝。
 
 **浏览器**：插件要用真实浏览器渲染贴吧页面，但通常不用额外装——Windows / macOS 自带 Edge 或装了 Chrome 就够了。只有系统里找不到任何 chromium 系浏览器时（多见于干净的 Linux 服务器）：

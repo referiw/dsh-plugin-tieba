@@ -86,6 +86,7 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 | `lib/config-store.mjs` | 配置读写（JSON + mtime 缓存） | 工具调用时重读，改完即时生效 |
 | `lib/paths.mjs` | 所有运行期路径 | 只在这里拼路径 |
 | `lib/browser.mjs` | 定位并启动浏览器 | 别退回"绑定 playwright 版本"的写法，见下文 |
+| `stripUndefined()`（tool-schema） | 工具出口清洗 | 宿主做 lossless-JSON 校验：对象里留 `{x: undefined}` 会让**整次工具调用**被判无效（`value is not lossless JSON`）。`localDefineTool` 已在出口统一剔除 undefined，写新字段时仍别主动产出 undefined/NaN |
 | `inject`（index） | 服务依赖 | `tools` 必须；`webServer` / `webStartup` 用 `ctx.get()` + `ctx.inject([...], cb)` 惰性取。**别写成 `{ required, optional }`**——cordis 把对象当"服务名→配置"的映射，会去找叫 required 的服务，插件直接不激活 |
 | `scripts/check-browser.mjs` | 诊断：打印选中的浏览器 | 只读，不改状态，可随时跑 |
 | `displayPath()`（core） | 对外展示路径 | 默认返回**绝对路径**；`DSH_TIEBA_PATH_STYLE=rel` 给相对 cwd 的路径（cwd=家目录时最干净），`=home` 给 `~/...`（调用方需自行展开） |
