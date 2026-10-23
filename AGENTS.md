@@ -86,6 +86,7 @@ React 必须 `require('react')`（dsh web 没有全局 React）。现成样例�
 | `lib/config-store.mjs` | 配置读写（JSON + mtime 缓存） | 工具调用时重读，改完即时生效 |
 | `lib/paths.mjs` | 所有运行期路径 | 只在这里拼路径 |
 | `lib/browser.mjs` | 定位并启动浏览器 | 别退回"绑定 playwright 版本"的写法，见下文 |
+| `inject`（index） | 服务依赖 | `tools` 必须；`webServer` / `webStartup` 用 `ctx.get()` + `ctx.inject([...], cb)` 惰性取。**别写成 `{ required, optional }`**——cordis 把对象当"服务名→配置"的映射，会去找叫 required 的服务，插件直接不激活 |
 | `scripts/check-browser.mjs` | 诊断：打印选中的浏览器 | 只读，不改状态，可随时跑 |
 | `displayPath()`（core） | 对外展示路径 | 默认返回**绝对路径**；`DSH_TIEBA_PATH_STYLE=rel` 给相对 cwd 的路径（cwd=家目录时最干净），`=home` 给 `~/...`（调用方需自行展开） |
 | `formatPostedAt()`（core） | 时间归一化 | 贴吧给的是 `10-22 12:22` / `3小时前` / `昨天 09:10`，统一成 `YYYY-MM-DD HH:MM`（东八区）；省略年份按「不在未来」推断 |

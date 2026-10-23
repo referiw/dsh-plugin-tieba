@@ -201,8 +201,11 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 
 ```bash
 tieba status                    # 登录态
+tieba bar v                     # 吧内帖子列表（默认最新）
+tieba bar v --tab 最热 --page 2 # 排序 + 翻页
 tieba thread 1234567890         # 读帖
 tieba thread 1234567890 --json  # 结构化输出
+tieba thread 1234567890 --images both   # 同时下原图
 ```
 
 `tieba` 是包的 `bin`；没全局安装时用 `node src/cli.mjs status` 等效。

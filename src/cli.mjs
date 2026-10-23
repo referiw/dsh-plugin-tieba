@@ -17,8 +17,14 @@ const flag = (f, d) => { const i = argv.indexOf(`--${f}`); return i >= 0 ? argv[
 
 const USAGE = `用法:
   tieba status                       # 登录状态
+  tieba bar <吧名> [选项]             # 吧内帖子列表（最新/最热/精华）
   tieba thread <tid> [选项]           # 全文→抽样→带图输出
   tieba login                        # 扫码登录
+
+bar 选项:
+  --tab <最新|最热|精华>   排序方式（默认 最新）
+  --page N               页码（默认 1，每页约 50 条）
+  --json                 结构化输出
 
 thread 选项:
   --refresh          忽略缓存重拉
@@ -26,9 +32,10 @@ thread 选项:
   --no-sample        全读
   --floors N         固定层数
   --ratio R          固定比例
-  --min N --max N    动态抽样上下界（默认 50/300）
+  --min N --max N    动态抽样上下界（默认 50/120）
   --max-chars N      正文截断字数（0=不截断）
   --max-area N       图片像素面积上限（默认 1200000）
+  --images <thumb|original|both>  图片取哪一档（默认 thumb）
   --gap MS           请求间隔（默认 4000）`;
 
 if (!cmd || ['-h', '--help'].includes(cmd)) { console.log(USAGE); process.exit(0); }
@@ -42,6 +49,7 @@ const tb = new Tieba({
   ...(has('no-sample') ? { sampleMode: 'all' } : {}),
   ...(has('floors') ? { sampleMode: 'fixed', sampleFixed: Number(flag('floors')) } : {}),
   ...(has('ratio') ? { sampleMode: 'ratio', sampleRatio: Number(flag('ratio')) } : {}),
+  ...(has('images') ? { imageQuality: String(flag('images', 'thumb')) } : {}),
 });
 
 try {
@@ -55,6 +63,28 @@ try {
     const { spawnSync } = await import('node:child_process');
     const r = spawnSync(process.execPath, [path.join(HERE, 'login.mjs'), '--site', 'tieba'], { stdio: 'inherit' });
     process.exit(r.status ?? 1);
+  }
+
+  if (cmd === 'bar') {
+    if (!target) { console.error('缺少吧名（不带「吧」字，例如 v）'); process.exit(2); }
+    const res = await tb.bar(target, { tab: flag('tab', null), page: Number(flag('page', 1)) });
+    if (has('json')) {
+      process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+    } else {
+      console.log(`${res.kw} ｜ ${res.tab || '最新'} ｜ 第 ${res.page} 页 ｜ ${res.threads.length} 条\n`);
+      res.threads.forEach((t, i) => {
+        const bits = [
+          `[${t.tid}]`,
+          t.title || '(无标题)',
+          t.author ? `· ${t.author}` : null,
+          t.replies != null ? `· ${t.replies} 回` : null,
+          t.lastReplyAt ? `· ${t.lastReplyAt}` : null,
+          t.isTop ? '· 置顶' : null,
+        ].filter(Boolean);
+        console.log(`${String(i + 1).padStart(2)}. ${bits.join(' ')}`);
+      });
+    }
+    process.exit(res.threads.length ? 0 : 4);
   }
 
   if (cmd === 'thread') {
@@ -71,8 +101,10 @@ try {
         console.log(`\n──── 第 ${f.index} 层 ｜ ${f.percent}% ｜ ${f.author || '匿名'}${f.isAuthor ? ' 【楼主】' : ''}`);
         console.log(f.text + (f.truncated ? `\n   …（已截断，原长 ${f.textLength} 字）` : ''));
         for (const im of f.images) {
-          const note = im.compressed ? `（${im.originalWidth}x${im.originalHeight} → ${im.width}x${im.height}）` : '';
-          console.log(`   🖼  ${im.path} ${note}`);
+          const th = im.thumb || im;
+          const note = th.compressed ? `（${th.originalWidth}x${th.originalHeight} → ${th.width}x${th.height}）` : '';
+          const orig = im.original ? ` ｜ 原图 ${im.original.path}` : '';
+          console.log(`   🖼  ${th.path} ${note}${orig}`);
         }
         if (f.replies.length) {
           console.log(`   └ 楼中楼 ${f.replyCount || f.replies.length} 条：`);
