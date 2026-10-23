@@ -42,7 +42,8 @@
     "icon.svg",
     "locale/",
     "cordis.patch.yml",
-    "README.md",`n    "CHANGELOG.md",
+    "README.md",
+    "CHANGELOG.md",
     "AGENTS.md",
     "LICENSE",
     "docs/"
