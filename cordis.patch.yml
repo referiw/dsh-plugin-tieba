@@ -1,5 +1,6 @@
 # dsh-plugin-tieba —— 只读贴吧
-# 装法：pnpm add 到 profile，并把包名写进 package.json 的 dsh.profile.bundles
+# 装法：dsh plugin --profile <profile> add dsh-plugin-tieba
+# （会同时写 dependencies 和 dsh.profile.bundles，不需要手工编辑本文件）
 - insert:
     - id: tieba
       name: 'dsh-plugin-tieba'
@@ -7,7 +8,9 @@
         gapMs: 4000
         sampleMode: dynamic
         sampleMin: 50
-        sampleMax: 300
-        truncateText: false
-        maxTextChars: 2000
+        # 300 层整吞会把上下文吃掉一大块；120 层足够看清一个帖的走向
+        sampleMax: 120
+        truncateText: true
+        maxTextChars: 600
         imageMaxArea: 1200000
+        imageMaxWidth: 1280

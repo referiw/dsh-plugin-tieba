@@ -50,12 +50,12 @@
 给一个 `tid`，回一份按楼层顺序排好的材料：
 
 ```text
-《示例帖子：一个关于融资的讨论》 楼主 用户甲 ｜ 全文 39 层 ｜ 抽取 39 层
+《示例帖子：一个关于融资的讨论》 楼主 用户甲 ｜ 发帖 2026-10-22 12:22 ｜ 全文 39 层 ｜ 抽取 39 层
 
 【第 1 层 0% 用户甲 楼主】
 示例帖子的主楼内容
  [图1]
-[图 …/.dsh-tieba/images/1234567890/f1_1.jpg]
+[图 …/.dsh-tieba/images/1234567890/f1_1.jpg 250x304 ｜ http://tiebapic.baidu.com/…jpg]
 
 【第 3 层 5% 用户乙】
 这是某一层楼的回复内容[表情:咧嘴笑]
@@ -65,10 +65,11 @@
 
 | 特性 | 说明 |
 |---|---|
-| 按楼层 | 图片紧跟所属楼层，楼中楼挂在楼层下面 |
+| 按楼层 | 图片紧跟所属楼层，楼中楼挂在楼层下方；楼层号取页面给的 `floor_num` |
+| 时间参考 | 顶部给楼主的发帖时间（全贴只此一处），相对时间会归一成 `YYYY-MM-DD HH:MM` |
 | 表情转中文 | `image_emoticon22` → `[表情:咧嘴笑]`，**不读图** |
 | 省上下文 | 头像、昵称挂件永久跳过 |
-| 图片 | 按像素面积等比压缩，默认返回绝对路径，可直接交给读图工具 |
+| 图片 | 每张图给三样：`thumb`（本地缩略图，默认读这个）、`original`（按需下载的原图）、`url`（原图外链） |
 | 路径样式 | `DSH_TIEBA_PATH_STYLE`：默认绝对路径；`rel` 相对当前工作目录；`home` 输出 `~/...`（需调用方自行展开） |
 
 ## 安装
@@ -79,9 +80,11 @@
 dsh plugin --profile <profile> add dsh-plugin-tieba
 ```
 
-`<profile>` 换成你在用的那个：跑 `dsh web` 就是 `web`，桌面版是 `desktop`，`ls ~/.dsh/profiles` 能看到全部。
+`<profile>` 换成你在用的那个：跑 `dsh web` 就是 `web`，`ls ~/.dsh/profiles` 能看到全部。
 
 这条命令会同时写 `dependencies` 和 `dsh.profile.bundles`，**不用手工编辑**。装完重启 DSH，浏览器硬刷新一次。
+
+> **桌面版注意**：`desktop` profile 由 Electron 独占管理，命令行会直接拒绝（`profile "desktop" is managed exclusively by the Electron application`）。桌面用户请走 **设置 → 插件** 安装，或用 `--profile web` 起一个独立 profile。
 
 > **升级插件后也要重启**（不只是第一次装）：工具 schema 是在启动时注册的，不重启会继续用旧的那份。旧版本有问题时，症状就是对话被 API 直接拒绝。
 
@@ -134,11 +137,14 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
   "sampleMode": "dynamic",   // dynamic | fixed | ratio | all
   "floors": 100,             // sampleMode=fixed 时的层数
   "ratio": 0.1,              // sampleMode=ratio 时的比例
-  "truncateText": false,     // 是否截断过长楼层
-  "maxTextChars": 2000,      // 截断时每层保留字数
+  "truncateText": true,      // 是否截断过长楼层（默认开）
+  "maxTextChars": 600,       // 截断时每层保留字数
+  "imageQuality": "thumb",   // thumb | original | both
   "imageMaxArea": 1200000    // 图片像素面积上限
 }
 ```
+
+图片默认只下缩略图（贴吧给的就是 250px 宽），够看清版式；要读小字（聊天截图、票面、字幕）时传 `imageQuality: "original"` 或 `"both"`，会额外下载原图并给出 `original.path`。每张图另有 `url` 字段，是原图的百度外链，可以直接引用。
 
 ## 抽样策略
 
@@ -161,10 +167,11 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 | 键 | 默认 | 说明 |
 |---|---|---|
 | `sampleMode` | `dynamic` | 抽样方式 |
-| `sampleMin` / `sampleMax` | `50` / `300` | 动态抽样的上下界 |
+| `sampleMin` / `sampleMax` | `50` / `120` | 动态抽样的上下界 |
 | `sampleFixed` / `sampleRatio` | `50` / `0.2` | fixed / ratio 模式的取值 |
-| `truncateText` | `false` | 是否截断过长楼层 |
-| `maxTextChars` | `2000` | 截断时保留的字数 |
+| `truncateText` | `true` | 是否截断过长楼层（默认开，省上下文） |
+| `maxTextChars` | `600` | 截断时保留的字数 |
+| `imageQuality` | `thumb` | `thumb` 只下缩略图；`original` 下原图；`both` 都下 |
 | `imageMaxArea` | `1200000` | 图片像素面积上限，超出等比缩小 |
 | `imageMaxWidth` / `imageMaxHeight` | `1280` / `2000` | 图片尺寸上限 |
 | `gapMs` | `4000` | 请求间隔（毫秒） |
