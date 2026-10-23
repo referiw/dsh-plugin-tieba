@@ -135,7 +135,7 @@ cookie 落在 `~/.dsh-tieba/cookies.json`（`0600`），可用 `DSH_TIEBA_HOME` 
 { "kw": "v", "tab": "最新", "page": 1 }   // tab: 最新 | 最热 | 精华
 ```
 
-返回 `[{ tid, title, author, replies, lastReplyAt, isTop }]`，直接拿 `tid` 就能喂给 `tieba_thread`。
+返回 `[{ tid, title, author, replies, lastReplyAt, isTop }]`，直接拿 `tid` 就能喂给 `tieba_thread`。置顶帖会排在最前、`isTop: true`，但它们没有作者和回复数（卡片上就没有这些字段）。
 
 > 贴吧没有可用的公开列表接口（`/c/f/frs/page` 返回 `error_code 110001`），只能读渲染后的 DOM。
 > 前端改版时列表会抽不出来——把 `config.selectors` 里的四个选择器改掉即可，**不用等发版**：
